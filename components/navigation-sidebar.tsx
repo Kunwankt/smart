@@ -38,7 +38,8 @@ interface NavigationSidebarProps {
   onClearPath: () => void;
   navigationSteps: NavigationStep[];
   isAdminMode: boolean;
-  onToggleAdminMode: () => void;
+  onAdminLogin: (adminKey: string) => void;
+  onAdminLogout: () => void;
   onAddRoom: () => void;
   onPickCoordinates: () => void;
   onResetData: () => void;
@@ -62,7 +63,8 @@ export function NavigationSidebar({
   onClearPath,
   navigationSteps,
   isAdminMode,
-  onToggleAdminMode,
+  onAdminLogin,
+  onAdminLogout,
   onAddRoom,
   onPickCoordinates,
   onResetData,
@@ -79,7 +81,7 @@ export function NavigationSidebar({
 
   const handleAdminBadgeClick = () => {
     if (isAdminMode) {
-      onToggleAdminMode();
+      onAdminLogout();
       return;
     }
     setAdminPassword("");
@@ -95,7 +97,7 @@ export function NavigationSidebar({
     setAdminDialogOpen(false);
     setAdminPassword("");
     setAdminError(null);
-    onToggleAdminMode();
+    onAdminLogin("ankit112");
   };
 
   return (
@@ -179,7 +181,7 @@ export function NavigationSidebar({
               className="cursor-pointer"
               onClick={handleAdminBadgeClick}
             >
-              {isAdminMode ? "Admin Mode" : "View Mode"}
+              {isAdminMode ? "Admin: ON" : "Admin: OFF (click)"}
             </Badge>
           </CardTitle>
         </CardHeader>

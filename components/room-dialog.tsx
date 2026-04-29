@@ -39,6 +39,16 @@ const roomTypes: Room["type"][] = [
   "stairs",
   "elevator",
   "entrance",
+  "washroom",
+  "office",
+  "audi",
+  "stairs-lift",
+  "gate",
+  "desk",
+  "lab",
+  "classroom",
+  "fire",
+  "faculty",
 ];
 
 export function RoomDialog({

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useRef, useState } from "react";
 import { Room, PathResult } from "@/lib/building-data";
 import { cn } from "@/lib/utils";
 
@@ -10,7 +11,9 @@ interface FloorMapProps {
   pathResult: PathResult | null;
   isAdminMode: boolean;
   isPickingCoordinates: boolean;
-  onRoomClick: (room: Room) => void;
+  onRoomSelect: (room: Room) => void;
+  onRoomEdit: (room: Room) => void;
+  onRoomUpdate: (room: Room) => void;
   onMapClick: (x: number, y: number) => void;
 }
 
@@ -21,36 +24,82 @@ export function FloorMap({
   pathResult,
   isAdminMode,
   isPickingCoordinates,
-  onRoomClick,
+  onRoomSelect,
+  onRoomEdit,
+  onRoomUpdate,
   onMapClick,
 }: FloorMapProps) {
   const pathRoomIds = pathResult?.path.map((r) => r.id) || [];
+  const svgRef = useRef<SVGSVGElement | null>(null);
 
-  const getRoomColor = (room: Room) => {
-    if (pathRoomIds.includes(room.id)) {
-      return "fill-primary/80 stroke-primary";
-    }
-    switch (room.type) {
-      case "entrance":
-        return "fill-accent/60 stroke-accent";
-      case "stairs":
-        return "fill-amber-100 stroke-amber-500";
-      case "elevator":
-        return "fill-sky-100 stroke-sky-500";
-      case "corridor":
-        return "fill-muted stroke-muted-foreground/30";
-      default:
-        return "fill-card stroke-border hover:fill-secondary";
-    }
+  const [dragging, setDragging] = useState<{
+    id: string;
+    dx: number;
+    dy: number;
+  } | null>(null);
+  const [resizing, setResizing] = useState<{
+    id: string;
+    startX: number;
+    startY: number;
+    startW: number;
+    startH: number;
+  } | null>(null);
+
+  const roomById = useMemo(() => new Map(rooms.map((r) => [r.id, r])), [rooms]);
+
+  const getSvgPoint = (clientX: number, clientY: number) => {
+    const svg = svgRef.current;
+    if (!svg) return { x: 0, y: 0 };
+    const pt = svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    const m = svg.getScreenCTM();
+    if (!m) return { x: 0, y: 0 };
+    const p = pt.matrixTransform(m.inverse());
+    return { x: p.x, y: p.y };
   };
 
   const handleSvgClick = (e: React.MouseEvent<SVGSVGElement>) => {
     if (!isPickingCoordinates) return;
     const svg = e.currentTarget;
     const rect = svg.getBoundingClientRect();
-    const x = Math.round(((e.clientX - rect.left) / rect.width) * 800);
-    const y = Math.round(((e.clientY - rect.top) / rect.height) * 450);
+    const x = Math.round(((e.clientX - rect.left) / rect.width) * 1000);
+    const y = Math.round(((e.clientY - rect.top) / rect.height) * 800);
     onMapClick(x, y);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (!isAdminMode || isPickingCoordinates) return;
+
+    if (dragging) {
+      const room = roomById.get(dragging.id);
+      if (!room) return;
+      const p = getSvgPoint(e.clientX, e.clientY);
+      onRoomUpdate({
+        ...room,
+        x: Math.round(p.x - dragging.dx),
+        y: Math.round(p.y - dragging.dy),
+      });
+      return;
+    }
+
+    if (resizing) {
+      const room = roomById.get(resizing.id);
+      if (!room) return;
+      const p = getSvgPoint(e.clientX, e.clientY);
+      const newW = Math.max(20, Math.round(resizing.startW + (p.x - resizing.startX)));
+      const newH = Math.max(20, Math.round(resizing.startH + (p.y - resizing.startY)));
+      onRoomUpdate({
+        ...room,
+        width: newW,
+        height: newH,
+      });
+    }
+  };
+
+  const stopInteractions = () => {
+    setDragging(null);
+    setResizing(null);
   };
 
   // Generate path line between rooms in the path
@@ -104,43 +153,28 @@ export function FloorMap({
         </span>
       </div>
       <svg
-        viewBox="0 0 800 450"
+        viewBox="0 0 1000 800"
         className={cn(
-          "w-full h-auto bg-background border border-border rounded-lg shadow-inner",
+          "w-full h-auto bg-gray-50 border border-border rounded-lg shadow-inner",
           isPickingCoordinates && "cursor-crosshair"
         )}
+        ref={svgRef}
         onClick={handleSvgClick}
+        onPointerMove={handlePointerMove}
+        onPointerUp={stopInteractions}
+        onPointerCancel={stopInteractions}
+        onPointerLeave={stopInteractions}
       >
-        {/* Grid pattern */}
-        <defs>
-          <pattern
-            id="grid"
-            width="40"
-            height="40"
-            patternUnits="userSpaceOnUse"
-          >
+        {/* Static corridor/wall elements (matches provided HTML for Ground) */}
+        {rooms[0]?.floor === "ground" && (
+          <g>
+            <line x1="50" y1="180" x2="950" y2="180" className="corridor" />
             <path
-              d="M 40 0 L 0 0 0 40"
-              fill="none"
-              className="stroke-border/50"
-              strokeWidth="0.5"
+              d="M 0 300 Q 50 280 100 300 T 200 300 T 300 300 T 400 300 T 500 300 T 600 300 T 700 300 T 800 300 T 900 300 T 1000 300"
+              className="wavy-line"
             />
-          </pattern>
-        </defs>
-        <rect width="800" height="450" fill="url(#grid)" />
-
-        {/* Building outline */}
-        <rect
-          x="50"
-          y="30"
-          width="700"
-          height="380"
-          fill="none"
-          className="stroke-foreground/20"
-          strokeWidth="2"
-          strokeDasharray="10,5"
-          rx="8"
-        />
+          </g>
+        )}
 
         {/* Rooms */}
         {rooms.map((room) => (
@@ -148,7 +182,11 @@ export function FloorMap({
             key={room.id}
             onClick={(e) => {
               e.stopPropagation();
-              onRoomClick(room);
+              onRoomSelect(room);
+            }}
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              if (isAdminMode) onRoomEdit(room);
             }}
             className={cn(
               "cursor-pointer transition-all duration-200",
@@ -161,42 +199,58 @@ export function FloorMap({
               width={room.width}
               height={room.height}
               className={cn(
-                getRoomColor(room),
-                "stroke-2 transition-colors duration-200",
-                selectedRoom?.id === room.id && "stroke-primary stroke-[3px]"
+                "room",
+                room.type,
+                pathRoomIds.includes(room.id) && "active",
+                isAdminMode && "admin-mode",
+                selectedRoom?.id === room.id && "admin-selected"
               )}
-              rx="4"
+              rx="8"
+              onPointerDown={(e) => {
+                if (!isAdminMode || isPickingCoordinates) return;
+                e.stopPropagation();
+                (e.currentTarget as SVGRectElement).setPointerCapture(e.pointerId);
+
+                onRoomSelect(room);
+
+                const p = getSvgPoint(e.clientX, e.clientY);
+                setDragging({
+                  id: room.id,
+                  dx: p.x - room.x,
+                  dy: p.y - room.y,
+                });
+              }}
             />
             <text
               x={room.x + room.width / 2}
-              y={room.y + room.height / 2}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              className="fill-foreground text-[10px] font-medium pointer-events-none"
+              y={room.y + room.height / 2 + 5}
+              className="label"
             >
-              {room.name.length > 12
-                ? room.name.slice(0, 10) + "..."
-                : room.name}
+              {room.name}
             </text>
-            {room.type === "stairs" && (
-              <text
-                x={room.x + room.width / 2}
-                y={room.y + room.height / 2 + 12}
-                textAnchor="middle"
-                className="fill-muted-foreground text-[8px] pointer-events-none"
-              >
-                (Stairs)
-              </text>
-            )}
-            {room.type === "elevator" && (
-              <text
-                x={room.x + room.width / 2}
-                y={room.y + room.height / 2 + 12}
-                textAnchor="middle"
-                className="fill-muted-foreground text-[8px] pointer-events-none"
-              >
-                (Elevator)
-              </text>
+
+            {/* Resize handle (admin + selected) */}
+            {isAdminMode && selectedRoom?.id === room.id && (
+              <rect
+                x={room.x + room.width - 8}
+                y={room.y + room.height - 8}
+                width={16}
+                height={16}
+                className="resize-handle"
+                onPointerDown={(e) => {
+                  if (isPickingCoordinates) return;
+                  e.stopPropagation();
+                  (e.currentTarget as SVGRectElement).setPointerCapture(e.pointerId);
+                  const p = getSvgPoint(e.clientX, e.clientY);
+                  setResizing({
+                    id: room.id,
+                    startX: p.x,
+                    startY: p.y,
+                    startW: room.width,
+                    startH: room.height,
+                  });
+                }}
+              />
             )}
           </g>
         ))}

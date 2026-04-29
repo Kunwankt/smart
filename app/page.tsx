@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useEffect, useMemo, useCallback, useRef, useState } from "react";
 import { Building2 } from "lucide-react";
 import { FloorMap } from "@/components/floor-map";
 import { NavigationSidebar } from "@/components/navigation-sidebar";
@@ -19,6 +19,8 @@ export default function IndoorNavPage() {
   // Building data state
   const [floors, setFloors] = useState<Floor[]>(defaultBuildingData);
   const [selectedFloor, setSelectedFloor] = useState("ground");
+  const [adminKey, setAdminKey] = useState<string | null>(null);
+  const saveTimer = useRef<number | null>(null);
 
   // Navigation state
   const [fromRoom, setFromRoom] = useState<Room | null>(null);
@@ -47,6 +49,52 @@ export default function IndoorNavPage() {
   // Get all rooms for search/select
   const allRooms = useMemo(() => floors.flatMap((f) => f.rooms), [floors]);
 
+  // Load floors from DB on startup
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/building", { cache: "no-store" });
+        const data = await res.json();
+        if (!cancelled && data?.floors) {
+          setFloors(data.floors);
+          // Default start room
+          const mainGate = data.floors
+            .flatMap((f: Floor) => f.rooms)
+            .find((r: Room) => r.id === "main_gate");
+          if (mainGate) setFromRoom(mainGate);
+        }
+      } catch {
+        // ignore (keeps defaults)
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const saveFloorsToDb = useCallback(
+    (nextFloors: Floor[]) => {
+      if (!adminKey) return;
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+      saveTimer.current = window.setTimeout(async () => {
+        try {
+          await fetch("/api/admin/building", {
+            method: "PUT",
+            headers: {
+              "content-type": "application/json",
+              "x-admin-key": adminKey,
+            },
+            body: JSON.stringify({ floors: nextFloors }),
+          });
+        } catch {
+          // ignore
+        }
+      }, 400);
+    },
+    [adminKey]
+  );
+
   // Filter rooms by search query
   const filteredRooms = useMemo(() => {
     if (!searchQuery) return [];
@@ -62,15 +110,66 @@ export default function IndoorNavPage() {
     setPickedCoordinates(null);
   }, []);
 
-  // Handle room click
-  const handleRoomClick = useCallback(
+  const handleRoomSelectOnMap = useCallback(
     (room: Room) => {
       if (isAdminMode) {
         setEditingRoom(room);
-        setRoomDialogOpen(true);
+        return;
+      }
+
+      // View mode: click-to-navigate behavior
+      setSelectedFloor(room.floor);
+
+      if (!fromRoom) {
+        setFromRoom(room);
+        return;
+      }
+
+      setToRoom(room);
+      const result = findPath(fromRoom, room, floors);
+      if (result) {
+        setPathResult(result);
+        setNavigationSteps(result.steps);
+      } else {
+        setPathResult(null);
+        setNavigationSteps([
+          {
+            instruction:
+              "No path found. Admin needs to connect rooms (connections).",
+            distance: 0,
+            floor: room.floor,
+          },
+        ]);
       }
     },
+    [isAdminMode, fromRoom, floors]
+  );
+
+  const handleRoomEditOnMap = useCallback(
+    (room: Room) => {
+      if (!isAdminMode) return;
+      setEditingRoom(room);
+      setRoomDialogOpen(true);
+    },
     [isAdminMode]
+  );
+
+  const handleRoomUpdateOnMap = useCallback(
+    (room: Room) => {
+    setFloors((prev) => {
+      const next = prev.map((floor) =>
+        floor.id === room.floor
+          ? {
+              ...floor,
+              rooms: floor.rooms.map((r) => (r.id === room.id ? room : r)),
+            }
+          : floor
+      );
+      saveFloorsToDb(next);
+      return next;
+    });
+    },
+    [saveFloorsToDb]
   );
 
   // Handle map click for coordinate picking
@@ -108,8 +207,8 @@ export default function IndoorNavPage() {
   // Handle save room
   const handleSaveRoom = useCallback(
     (room: Room) => {
-      setFloors((prev) =>
-        prev.map((floor) => {
+      setFloors((prev) => {
+        const next = prev.map((floor) => {
           if (floor.id !== room.floor) {
             // Remove room from other floors if it was moved
             return {
@@ -141,18 +240,21 @@ export default function IndoorNavPage() {
             return { ...floor, rooms: newRooms };
           }
         })
-      );
+        saveFloorsToDb(next);
+        return next;
+      });
       setEditingRoom(null);
       setPickedCoordinates(null);
       setIsPickingCoordinates(false);
     },
-    []
+    [saveFloorsToDb]
   );
 
   // Handle delete room
-  const handleDeleteRoom = useCallback((roomId: string) => {
-    setFloors((prev) =>
-      prev.map((floor) => ({
+  const handleDeleteRoom = useCallback(
+    (roomId: string) => {
+    setFloors((prev) => {
+      const next = prev.map((floor) => ({
         ...floor,
         rooms: floor.rooms
           .filter((r) => r.id !== roomId)
@@ -160,9 +262,13 @@ export default function IndoorNavPage() {
             ...r,
             connections: r.connections.filter((c) => c !== roomId),
           })),
-      }))
-    );
-  }, []);
+      }));
+      saveFloorsToDb(next);
+      return next;
+    });
+    },
+    [saveFloorsToDb]
+  );
 
   // Handle reset to default
   const handleResetData = useCallback(() => {
@@ -245,7 +351,14 @@ export default function IndoorNavPage() {
             onClearPath={handleClearPath}
             navigationSteps={navigationSteps}
             isAdminMode={isAdminMode}
-            onToggleAdminMode={() => setIsAdminMode(!isAdminMode)}
+            onAdminLogin={(key) => {
+              setAdminKey(key);
+              setIsAdminMode(true);
+            }}
+            onAdminLogout={() => {
+              setIsAdminMode(false);
+              setAdminKey(null);
+            }}
             onAddRoom={handleAddRoom}
             onPickCoordinates={handlePickCoordinates}
             onResetData={handleResetData}
@@ -266,7 +379,9 @@ export default function IndoorNavPage() {
                 pathResult={pathResult}
                 isAdminMode={isAdminMode}
                 isPickingCoordinates={isPickingCoordinates}
-                onRoomClick={handleRoomClick}
+                onRoomSelect={handleRoomSelectOnMap}
+                onRoomEdit={handleRoomEditOnMap}
+                onRoomUpdate={handleRoomUpdateOnMap}
                 onMapClick={handleMapClick}
               />
             )}
