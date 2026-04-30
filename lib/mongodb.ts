@@ -16,15 +16,29 @@ function getClientPromise() {
     throw new Error("Missing MONGODB_URI env var");
   }
 
+  const client = new MongoClient(uri, {
+    ...options,
+    serverSelectionTimeoutMS: 5000, // Fail fast if can't connect
+  });
+
+  const connectWithLogging = async () => {
+    try {
+      const connectedClient = await client.connect();
+      console.log("✅ Successfully connected to MongoDB Atlas");
+      return connectedClient;
+    } catch (err) {
+      console.error("❌ MongoDB connection failed:", (err as Error).message);
+      throw err;
+    }
+  };
+
   if (process.env.NODE_ENV === "development") {
     if (!global.__mongoClientPromise) {
-      const client = new MongoClient(uri, options);
-      global.__mongoClientPromise = client.connect();
+      global.__mongoClientPromise = connectWithLogging();
     }
     clientPromise = global.__mongoClientPromise;
   } else {
-    const client = new MongoClient(uri, options);
-    clientPromise = client.connect();
+    clientPromise = connectWithLogging();
   }
 
   return clientPromise;
