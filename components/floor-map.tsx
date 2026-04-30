@@ -110,7 +110,7 @@ export function FloorMap({
     const isGround = currentFloorId === "ground";
     const CORRIDOR_Y = 180;
 
-    const segments: { x1: number; y1: number; x2: number; y2: number }[] = [];
+    let pathD = "";
     const points: { x: number; y: number }[] = [];
 
     for (let i = 0; i < pathResult.path.length - 1; i++) {
@@ -123,21 +123,21 @@ export function FloorMap({
         const x2 = room2.x + room2.width / 2;
         const y2 = room2.y + room2.height / 2;
 
+        if (pathD === "") {
+          pathD = `M ${x1} ${y1}`;
+          points.push({ x: x1, y: y1 });
+        }
+
         if (isGround) {
           // Route through the central corridor line (y=180)
-          // 1. Vertical from room1 to corridor
-          segments.push({ x1, y1, x2: x1, y2: CORRIDOR_Y });
-          // 2. Horizontal along corridor
-          segments.push({ x1, y1: CORRIDOR_Y, x2, y2: CORRIDOR_Y });
-          // 3. Vertical from corridor to room2
-          segments.push({ x1: x2, y1: CORRIDOR_Y, x2, y2 });
+          pathD += ` L ${x1} ${CORRIDOR_Y} L ${x2} ${CORRIDOR_Y} L ${x2} ${y2}`;
         } else {
           // Standard direct connection for other floors
-          segments.push({ x1, y1, x2, y2 });
+          pathD += ` L ${x2} ${y2}`;
         }
       }
 
-      if (room1.floor === currentFloorId) {
+      if (room1.floor === currentFloorId && points.length === 0) {
         points.push({
           x: room1.x + room1.width / 2,
           y: room1.y + room1.height / 2,
@@ -145,29 +145,51 @@ export function FloorMap({
       }
     }
 
-    // Add the last point if it's on this floor
-    const lastRoom = pathResult.path[pathResult.path.length - 1];
-    if (lastRoom.floor === currentFloorId) {
-      points.push({
-        x: lastRoom.x + lastRoom.width / 2,
-        y: lastRoom.y + lastRoom.height / 2,
-      });
-    }
-
-    if (segments.length === 0 && points.length === 0) return null;
+    if (pathD === "") return null;
 
     return (
       <g>
-        {segments.map((s, i) => (
-          <line
-            key={`seg-${i}`}
-            x1={s.x1}
-            y1={s.y1}
-            x2={s.x2}
-            y2={s.y2}
-            className="nav-path"
+        {/* The background static path */}
+        <path
+          id="nav-path-guideline"
+          d={pathD}
+          fill="none"
+          className="nav-path"
+        />
+
+        {/* The moving guide dot */}
+        <circle r="8" className="fill-blue-600 shadow-lg">
+          <animateMotion
+            dur="3s"
+            repeatCount="indefinite"
+            path={pathD}
+            rotate="auto"
           />
-        ))}
+        </circle>
+
+        {/* Pulsing effect on the guide dot */}
+        <circle r="8" className="fill-blue-400 opacity-50">
+          <animateMotion
+            dur="3s"
+            repeatCount="indefinite"
+            path={pathD}
+            rotate="auto"
+          />
+          <animate
+            attributeName="r"
+            values="8;14;8"
+            dur="1.5s"
+            repeatCount="indefinite"
+          />
+          <animate
+            attributeName="opacity"
+            values="0.5;0.1;0.5"
+            dur="1.5s"
+            repeatCount="indefinite"
+          />
+        </circle>
+
+        {/* Start/End markers */}
         {points.map((p, i) => (
           <circle
             key={`pt-${i}`}
