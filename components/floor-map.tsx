@@ -107,6 +107,9 @@ export function FloorMap({
     if (!pathResult || pathResult.path.length < 2) return null;
 
     const currentFloorId = rooms[0]?.floor;
+    const isGround = currentFloorId === "ground";
+    const CORRIDOR_Y = 180;
+
     const segments: { x1: number; y1: number; x2: number; y2: number }[] = [];
     const points: { x: number; y: number }[] = [];
 
@@ -115,12 +118,23 @@ export function FloorMap({
       const room2 = pathResult.path[i + 1];
 
       if (room1.floor === currentFloorId && room2.floor === currentFloorId) {
-        segments.push({
-          x1: room1.x + room1.width / 2,
-          y1: room1.y + room1.height / 2,
-          x2: room2.x + room2.width / 2,
-          y2: room2.y + room2.height / 2,
-        });
+        const x1 = room1.x + room1.width / 2;
+        const y1 = room1.y + room1.height / 2;
+        const x2 = room2.x + room2.width / 2;
+        const y2 = room2.y + room2.height / 2;
+
+        if (isGround) {
+          // Route through the central corridor line (y=180)
+          // 1. Vertical from room1 to corridor
+          segments.push({ x1, y1, x2: x1, y2: CORRIDOR_Y });
+          // 2. Horizontal along corridor
+          segments.push({ x1, y1: CORRIDOR_Y, x2, y2: CORRIDOR_Y });
+          // 3. Vertical from corridor to room2
+          segments.push({ x1: x2, y1: CORRIDOR_Y, x2, y2 });
+        } else {
+          // Standard direct connection for other floors
+          segments.push({ x1, y1, x2, y2 });
+        }
       }
 
       if (room1.floor === currentFloorId) {
@@ -151,10 +165,7 @@ export function FloorMap({
             y1={s.y1}
             x2={s.x2}
             y2={s.y2}
-            className="stroke-primary"
-            strokeWidth="4"
-            strokeLinecap="round"
-            strokeDasharray="8,4"
+            className="nav-path"
           />
         ))}
         {points.map((p, i) => (
@@ -163,7 +174,7 @@ export function FloorMap({
             cx={p.x}
             cy={p.y}
             r="6"
-            className="fill-primary stroke-primary-foreground"
+            className="fill-blue-500 stroke-white"
             strokeWidth="2"
           />
         ))}
