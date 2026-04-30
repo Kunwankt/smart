@@ -1,25 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/mongodb";
-import { getLocalData, saveLocalData } from "@/lib/local-db";
+import { getRoomsData, saveRoomsData } from "@/lib/local-db";
 import { isAdminRequest } from "@/lib/admin-auth";
-import type { AuditLog } from "@/lib/audit";
 
 export async function GET(req: NextRequest) {
   if (!isAdminRequest(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let db: Awaited<ReturnType<typeof getDb>> | null = null;
   try {
-    db = await getDb();
+    const data = await getRoomsData();
+    return NextResponse.json({ building: data, source: "json-file" });
   } catch (err) {
-    console.log("MongoDB GET unavailable, using local storage:", (err as Error).message);
-    const localData = await getLocalData();
-    return NextResponse.json({ building: localData ?? null, source: "local-file" });
+    console.error("Admin GET failed:", err);
+    return NextResponse.json({ error: "Failed to load data" }, { status: 500 });
   }
-  const buildingCol = db.collection("buildingData");
-  const doc = await buildingCol.findOne({ _id: "current" });
-  return NextResponse.json({ building: doc ?? null, source: "db" });
 }
 
 export async function PUT(req: NextRequest) {
@@ -33,50 +27,16 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Missing `floors` in body" }, { status: 400 });
   }
 
-  let db: Awaited<ReturnType<typeof getDb>> | null = null;
   try {
-    db = await getDb();
-  } catch (err) {
-    console.log("MongoDB PUT unavailable, using local storage fallback:", (err as Error).message);
-    const success = await saveLocalData(floors);
+    const success = await saveRoomsData(floors);
     if (success) {
-      // Return success even if using fallback, but indicate it's local
-      return NextResponse.json({ ok: true, source: "local-file" });
+      return NextResponse.json({ ok: true, source: "json-file" });
     } else {
-      return NextResponse.json({ error: "Failed to save locally" }, { status: 500 });
+      return NextResponse.json({ error: "Failed to save to JSON file" }, { status: 500 });
     }
-  }
-
-  try {
-    const buildingCol = db.collection("buildingData");
-    const auditCol = db.collection<AuditLog>("auditLogs");
-
-    const before = await buildingCol.findOne({ _id: "current" });
-
-    await buildingCol.updateOne(
-      { _id: "current" },
-      { $set: { floors, updatedAt: new Date() } },
-      { upsert: true }
-    );
-
-    await auditCol.insertOne({
-      action: "update_building",
-      actor: "admin",
-      at: new Date(),
-      ip: req.headers.get("x-forwarded-for"),
-      userAgent: req.headers.get("user-agent"),
-      before: before?.floors,
-      after: floors,
-    });
-
-    return NextResponse.json({ ok: true, source: "mongodb" });
   } catch (err) {
-    console.error("MongoDB operation failed, trying local fallback:", err);
-    const success = await saveLocalData(floors);
-    if (success) {
-      return NextResponse.json({ ok: true, source: "local-file-after-db-error" });
-    }
-    return NextResponse.json({ error: "Database operation failed" }, { status: 500 });
+    console.error("Admin PUT failed:", err);
+    return NextResponse.json({ error: "Server error during save" }, { status: 500 });
   }
 }
 
