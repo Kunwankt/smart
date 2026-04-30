@@ -96,7 +96,11 @@ export default function IndoorNavPage() {
         if (!res.ok) {
           const data = await res.json().catch(() => null);
           setSaveStatus("idle");
-          setSaveError(data?.error || `Save failed (HTTP ${res.status})`);
+          // If it's a 404, the API route might be missing or wrongly named
+          const errorMessage = res.status === 404 
+            ? "Save failed (API route not found). Please check if /api/admin/building/route.ts exists."
+            : (data?.error || `Save failed (HTTP ${res.status})`);
+          setSaveError(errorMessage);
           return false;
         }
 
