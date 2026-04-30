@@ -45,7 +45,8 @@
             "help_desk",
             "colonel",
             "lift_left_g",
-            "stairs_left_g"
+            "stairs_left_g",
+            "room_011"
           ]
         },
         {
@@ -131,12 +132,12 @@
         },
         {
           "id": "colonel",
-          "name": "Colonel",
+          "name": "Colonel's Office",
           "floor": "ground",
-          "x": 48,
-          "y": 197,
-          "width": 120,
-          "height": 80,
+          "x": 47,
+          "y": 210,
+          "width": 173,
+          "height": 95,
           "type": "office",
           "connections": [
             "center_gate_left"
@@ -151,7 +152,10 @@
           "width": 100,
           "height": 80,
           "type": "office",
-          "connections": []
+          "connections": [
+            "center_gate_left",
+            "executive_hall"
+          ]
         },
         {
           "id": "executive_hall",
@@ -159,10 +163,13 @@
           "floor": "ground",
           "x": 354,
           "y": 80,
-          "width": 347,
-          "height": 80,
+          "width": 349,
+          "height": 77,
           "type": "office",
-          "connections": []
+          "connections": [
+            "room_011",
+            "washroom_male"
+          ]
         },
         {
           "id": "washroom_male",
@@ -173,7 +180,10 @@
           "width": 120,
           "height": 80,
           "type": "washroom",
-          "connections": []
+          "connections": [
+            "executive_hall",
+            "audi_sv"
+          ]
         },
         {
           "id": "audi_sv",
@@ -184,7 +194,9 @@
           "width": 100,
           "height": 200,
           "type": "audi",
-          "connections": []
+          "connections": [
+            "washroom_male"
+          ]
         }
       ]
     },
@@ -434,5 +446,5 @@
       ]
     }
   ],
-  "updatedAt": "2026-04-30T14:33:33.532Z"
+  "updatedAt": "2026-04-30T14:50:27.263Z"
 }

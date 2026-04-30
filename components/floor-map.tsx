@@ -106,34 +106,60 @@ export function FloorMap({
   const generatePathLine = () => {
     if (!pathResult || pathResult.path.length < 2) return null;
 
-    const currentFloorPath = pathResult.path.filter(
-      (room) => room.floor === rooms[0]?.floor
-    );
-    if (currentFloorPath.length < 2) return null;
+    const currentFloorId = rooms[0]?.floor;
+    const segments: { x1: number; y1: number; x2: number; y2: number }[] = [];
+    const points: { x: number; y: number }[] = [];
 
-    const points = currentFloorPath.map((room) => ({
-      x: room.x + room.width / 2,
-      y: room.y + room.height / 2,
-    }));
+    for (let i = 0; i < pathResult.path.length - 1; i++) {
+      const room1 = pathResult.path[i];
+      const room2 = pathResult.path[i + 1];
 
-    const pathD = points
-      .map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`))
-      .join(" ");
+      if (room1.floor === currentFloorId && room2.floor === currentFloorId) {
+        segments.push({
+          x1: room1.x + room1.width / 2,
+          y1: room1.y + room1.height / 2,
+          x2: room2.x + room2.width / 2,
+          y2: room2.y + room2.height / 2,
+        });
+      }
+
+      if (room1.floor === currentFloorId) {
+        points.push({
+          x: room1.x + room1.width / 2,
+          y: room1.y + room1.height / 2,
+        });
+      }
+    }
+
+    // Add the last point if it's on this floor
+    const lastRoom = pathResult.path[pathResult.path.length - 1];
+    if (lastRoom.floor === currentFloorId) {
+      points.push({
+        x: lastRoom.x + lastRoom.width / 2,
+        y: lastRoom.y + lastRoom.height / 2,
+      });
+    }
+
+    if (segments.length === 0 && points.length === 0) return null;
 
     return (
       <g>
-        <path
-          d={pathD}
-          fill="none"
-          className="stroke-primary"
-          strokeWidth="4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeDasharray="8,4"
-        />
+        {segments.map((s, i) => (
+          <line
+            key={`seg-${i}`}
+            x1={s.x1}
+            y1={s.y1}
+            x2={s.x2}
+            y2={s.y2}
+            className="stroke-primary"
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeDasharray="8,4"
+          />
+        ))}
         {points.map((p, i) => (
           <circle
-            key={i}
+            key={`pt-${i}`}
             cx={p.x}
             cy={p.y}
             r="6"
