@@ -149,43 +149,42 @@ export function FloorMap({
 
     return (
       <g>
-        {/* The background static path */}
+        {/* Define the arrow shape once */}
+        <defs>
+          <path
+            id="nav-arrow-shape"
+            d="M -10,-8 L 10,0 L -10,8 Z"
+            className="nav-arrow"
+          />
+        </defs>
+
+        {/* The background dashed path */}
         <path
-          id="nav-path-guideline"
           d={pathD}
           fill="none"
           className="nav-path"
         />
 
-        {/* The moving guide dot */}
-        <circle r="8" className="fill-blue-600 shadow-lg">
-          <animateMotion
-            dur="3s"
-            repeatCount="indefinite"
-            path={pathD}
-            rotate="auto"
-          />
-        </circle>
+        {/* Multiple moving arrows for flow */}
+        {[0, 1, 2].map((i) => (
+          <use key={`arrow-${i}`} href="#nav-arrow-shape">
+            <animateMotion
+              dur="4s"
+              repeatCount="indefinite"
+              path={pathD}
+              rotate="auto"
+              begin={`${i * 1.33}s`}
+            />
+          </use>
+        ))}
 
-        {/* Pulsing effect on the guide dot */}
-        <circle r="8" className="fill-blue-400 opacity-50">
+        {/* Pulsing guide dot for extra visibility */}
+        <circle r="6" className="fill-sky-500 shadow-lg">
           <animateMotion
-            dur="3s"
+            dur="4s"
             repeatCount="indefinite"
             path={pathD}
             rotate="auto"
-          />
-          <animate
-            attributeName="r"
-            values="8;14;8"
-            dur="1.5s"
-            repeatCount="indefinite"
-          />
-          <animate
-            attributeName="opacity"
-            values="0.5;0.1;0.5"
-            dur="1.5s"
-            repeatCount="indefinite"
           />
         </circle>
 
@@ -195,8 +194,8 @@ export function FloorMap({
             key={`pt-${i}`}
             cx={p.x}
             cy={p.y}
-            r="6"
-            className="fill-blue-500 stroke-white"
+            r="7"
+            className="fill-sky-600 stroke-white"
             strokeWidth="2"
           />
         ))}
