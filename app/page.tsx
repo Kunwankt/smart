@@ -21,6 +21,10 @@ export default function IndoorNavPage() {
   const [selectedFloor, setSelectedFloor] = useState("ground");
   const [adminKey, setAdminKey] = useState<string | null>(null);
   const saveTimer = useRef<number | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const lastSavedFloorsJson = useRef<string>(JSON.stringify(defaultBuildingData));
 
   // Navigation state
   const [fromRoom, setFromRoom] = useState<Room | null>(null);
@@ -58,6 +62,8 @@ export default function IndoorNavPage() {
         const data = await res.json();
         if (!cancelled && data?.floors) {
           setFloors(data.floors);
+          lastSavedFloorsJson.current = JSON.stringify(data.floors);
+          setHasUnsavedChanges(false);
           // Default start room
           const mainGate = data.floors
             .flatMap((f: Floor) => f.rooms)
@@ -73,27 +79,56 @@ export default function IndoorNavPage() {
     };
   }, []);
 
+  const performSave = useCallback(
+    async (nextFloors: Floor[]) => {
+      if (!adminKey) return false;
+      try {
+        setSaveStatus("saving");
+        setSaveError(null);
+        const res = await fetch("/api/admin/building", {
+          method: "PUT",
+          headers: {
+            "content-type": "application/json",
+            "x-admin-key": adminKey,
+          },
+          body: JSON.stringify({ floors: nextFloors }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => null);
+          setSaveStatus("idle");
+          setSaveError(data?.error || `Save failed (HTTP ${res.status})`);
+          return false;
+        }
+
+        lastSavedFloorsJson.current = JSON.stringify(nextFloors);
+        setHasUnsavedChanges(false);
+        setSaveStatus("saved");
+        window.setTimeout(() => setSaveStatus("idle"), 1200);
+        return true;
+      } catch {
+        setSaveStatus("idle");
+        setSaveError("Save failed (network). Is the server running?");
+        return false;
+      }
+    },
+    [adminKey]
+  );
+
   const saveFloorsToDb = useCallback(
     (nextFloors: Floor[]) => {
       if (!adminKey) return;
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
-      saveTimer.current = window.setTimeout(async () => {
-        try {
-          await fetch("/api/admin/building", {
-            method: "PUT",
-            headers: {
-              "content-type": "application/json",
-              "x-admin-key": adminKey,
-            },
-            body: JSON.stringify({ floors: nextFloors }),
-          });
-        } catch {
-          // ignore
-        }
+      saveTimer.current = window.setTimeout(() => {
+        void performSave(nextFloors);
       }, 400);
     },
-    [adminKey]
+    [adminKey, performSave]
   );
+
+  const saveNow = useCallback(async () => {
+    if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    return await performSave(floors);
+  }, [floors, performSave]);
 
   // Filter rooms by search query
   const filteredRooms = useMemo(() => {
@@ -165,11 +200,15 @@ export default function IndoorNavPage() {
             }
           : floor
       );
+      if (isAdminMode) {
+        const nextJson = JSON.stringify(next);
+        setHasUnsavedChanges(nextJson !== lastSavedFloorsJson.current);
+      }
       saveFloorsToDb(next);
       return next;
     });
     },
-    [saveFloorsToDb]
+    [saveFloorsToDb, isAdminMode]
   );
 
   // Handle map click for coordinate picking
@@ -240,6 +279,10 @@ export default function IndoorNavPage() {
             return { ...floor, rooms: newRooms };
           }
         })
+        if (isAdminMode) {
+          const nextJson = JSON.stringify(next);
+          setHasUnsavedChanges(nextJson !== lastSavedFloorsJson.current);
+        }
         saveFloorsToDb(next);
         return next;
       });
@@ -247,7 +290,7 @@ export default function IndoorNavPage() {
       setPickedCoordinates(null);
       setIsPickingCoordinates(false);
     },
-    [saveFloorsToDb]
+    [saveFloorsToDb, isAdminMode]
   );
 
   // Handle delete room
@@ -263,11 +306,15 @@ export default function IndoorNavPage() {
             connections: r.connections.filter((c) => c !== roomId),
           })),
       }));
+      if (isAdminMode) {
+        const nextJson = JSON.stringify(next);
+        setHasUnsavedChanges(nextJson !== lastSavedFloorsJson.current);
+      }
       saveFloorsToDb(next);
       return next;
     });
     },
-    [saveFloorsToDb]
+    [saveFloorsToDb, isAdminMode]
   );
 
   // Handle reset to default
@@ -280,6 +327,8 @@ export default function IndoorNavPage() {
     setEditingRoom(null);
     setPickedCoordinates(null);
     setIsPickingCoordinates(false);
+    lastSavedFloorsJson.current = JSON.stringify(defaultBuildingData);
+    setHasUnsavedChanges(false);
   }, []);
 
   // Handle add room
@@ -331,6 +380,21 @@ export default function IndoorNavPage() {
               CB Building Navigation {isAdminMode && "(Admin)"}
             </p>
           </div>
+          {isAdminMode && (
+            <div className="ml-auto flex items-center gap-2">
+              {saveStatus === "saving" && (
+                <span className="text-xs text-muted-foreground">Saving…</span>
+              )}
+              {saveStatus === "saved" && (
+                <span className="text-xs text-green-600">Saved</span>
+              )}
+              {saveError && (
+                <span className="text-xs text-destructive max-w-[420px] truncate">
+                  {saveError}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
@@ -354,11 +418,20 @@ export default function IndoorNavPage() {
             onAdminLogin={(key) => {
               setAdminKey(key);
               setIsAdminMode(true);
+              setSaveError(null);
+              setSaveStatus("idle");
             }}
             onAdminLogout={() => {
               setIsAdminMode(false);
               setAdminKey(null);
+              setSaveError(null);
+              setSaveStatus("idle");
+              setHasUnsavedChanges(false);
             }}
+            hasUnsavedChanges={hasUnsavedChanges}
+            saveStatus={saveStatus}
+            saveError={saveError}
+            onSaveNow={saveNow}
             onAddRoom={handleAddRoom}
             onPickCoordinates={handlePickCoordinates}
             onResetData={handleResetData}

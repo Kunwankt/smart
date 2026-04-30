@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/mongodb";
+import { getLocalData, saveLocalData } from "@/lib/local-db";
 import { isAdminRequest } from "@/lib/admin-auth";
 import type { AuditLog } from "@/lib/audit";
 
@@ -8,10 +9,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const db = await getDb();
+  let db: Awaited<ReturnType<typeof getDb>> | null = null;
+  try {
+    db = await getDb();
+  } catch (err) {
+    console.log("MongoDB GET unavailable, using local storage:", (err as Error).message);
+    const localData = await getLocalData();
+    return NextResponse.json({ building: localData ?? null, source: "local-file" });
+  }
   const buildingCol = db.collection("buildingData");
   const doc = await buildingCol.findOne({ _id: "current" });
-  return NextResponse.json({ building: doc ?? null });
+  return NextResponse.json({ building: doc ?? null, source: "db" });
 }
 
 export async function PUT(req: NextRequest) {
@@ -25,7 +33,18 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Missing `floors` in body" }, { status: 400 });
   }
 
-  const db = await getDb();
+  let db: Awaited<ReturnType<typeof getDb>> | null = null;
+  try {
+    db = await getDb();
+  } catch (err) {
+    console.log("MongoDB PUT unavailable, using local storage:", (err as Error).message);
+    const success = await saveLocalData(floors);
+    if (success) {
+      return NextResponse.json({ ok: true, source: "local-file" });
+    } else {
+      return NextResponse.json({ error: "Failed to save locally" }, { status: 500 });
+    }
+  }
   const buildingCol = db.collection("buildingData");
   const auditCol = db.collection<AuditLog>("auditLogs");
 

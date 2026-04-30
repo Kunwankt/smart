@@ -40,6 +40,10 @@ interface NavigationSidebarProps {
   isAdminMode: boolean;
   onAdminLogin: (adminKey: string) => void;
   onAdminLogout: () => void;
+  hasUnsavedChanges: boolean;
+  saveStatus: "idle" | "saving" | "saved";
+  saveError: string | null;
+  onSaveNow: () => Promise<boolean>;
   onAddRoom: () => void;
   onPickCoordinates: () => void;
   onResetData: () => void;
@@ -65,6 +69,10 @@ export function NavigationSidebar({
   isAdminMode,
   onAdminLogin,
   onAdminLogout,
+  hasUnsavedChanges,
+  saveStatus,
+  saveError,
+  onSaveNow,
   onAddRoom,
   onPickCoordinates,
   onResetData,
@@ -78,9 +86,15 @@ export function NavigationSidebar({
   const [adminDialogOpen, setAdminDialogOpen] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [adminError, setAdminError] = useState<string | null>(null);
+  const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
+  const [exitBusy, setExitBusy] = useState(false);
 
   const handleAdminBadgeClick = () => {
     if (isAdminMode) {
+      if (hasUnsavedChanges || saveStatus === "saving") {
+        setExitConfirmOpen(true);
+        return;
+      }
       onAdminLogout();
       return;
     }
@@ -90,14 +104,22 @@ export function NavigationSidebar({
   };
 
   const handleAdminLogin = () => {
-    if (adminPassword !== "ankit112") {
+    // Use only the environment variable, no hardcoded fallback
+    const expectedKey = process.env.NEXT_PUBLIC_ADMIN_KEY;
+    
+    if (!expectedKey) {
+      setAdminError("Admin key not configured. Set NEXT_PUBLIC_ADMIN_KEY in .env.local");
+      return;
+    }
+    
+    if (adminPassword !== expectedKey) {
       setAdminError("Wrong admin password.");
       return;
     }
     setAdminDialogOpen(false);
     setAdminPassword("");
     setAdminError(null);
-    onAdminLogin("ankit112");
+    onAdminLogin(expectedKey);
   };
 
   return (
@@ -209,6 +231,23 @@ export function NavigationSidebar({
             </Button>
           </div>
           <Button
+            variant="default"
+            size="sm"
+            onClick={async () => {
+              if (!isAdminMode) return;
+              setExitBusy(true);
+              try {
+                await onSaveNow();
+              } finally {
+                setExitBusy(false);
+              }
+            }}
+            disabled={!isAdminMode || saveStatus === "saving" || exitBusy || !hasUnsavedChanges}
+            className="w-full text-xs"
+          >
+            {saveStatus === "saving" || exitBusy ? "Saving…" : "Save Changes"}
+          </Button>
+          <Button
             variant="outline"
             size="sm"
             onClick={onResetData}
@@ -217,6 +256,18 @@ export function NavigationSidebar({
             <RotateCcw className="h-3 w-3 mr-1" />
             Reset to Default
           </Button>
+          {isAdminMode && (
+            <div className="space-y-1">
+              {hasUnsavedChanges && saveStatus !== "saving" && (
+                <p className="text-xs text-muted-foreground">
+                  You have unsaved changes.
+                </p>
+              )}
+              {saveError && (
+                <p className="text-xs text-destructive truncate">{saveError}</p>
+              )}
+            </div>
+          )}
           {isAdminMode && (
             <p className="text-xs text-muted-foreground">
               Click any room on the map to edit or delete it.
@@ -402,6 +453,54 @@ export function NavigationSidebar({
               Cancel
             </Button>
             <Button onClick={handleAdminLogin}>Enter Admin Mode</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={exitConfirmOpen} onOpenChange={setExitConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Exit Admin Mode?</DialogTitle>
+            <DialogDescription>
+              You have unsaved changes. Save them before exiting?
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setExitConfirmOpen(false)}
+              disabled={exitBusy || saveStatus === "saving"}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setExitConfirmOpen(false);
+                onAdminLogout();
+              }}
+              disabled={exitBusy || saveStatus === "saving"}
+            >
+              Exit without saving
+            </Button>
+            <Button
+              onClick={async () => {
+                setExitBusy(true);
+                try {
+                  const ok = await onSaveNow();
+                  if (ok) {
+                    setExitConfirmOpen(false);
+                    onAdminLogout();
+                  }
+                } finally {
+                  setExitBusy(false);
+                }
+              }}
+              disabled={exitBusy || saveStatus === "saving"}
+            >
+              Save & exit
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

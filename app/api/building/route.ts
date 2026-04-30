@@ -1,10 +1,22 @@
 import { NextResponse } from "next/server";
 import { defaultBuildingData } from "@/lib/building-data";
 import { getDb } from "@/lib/mongodb";
+import { getLocalData } from "@/lib/local-db";
 import type { AuditLog } from "@/lib/audit";
 
 export async function GET() {
-  const db = await getDb();
+  let db: Awaited<ReturnType<typeof getDb>> | null = null;
+  try {
+    db = await getDb();
+  } catch (err) {
+    console.log("MongoDB unavailable, falling back to local storage:", (err as Error).message);
+    const localData = await getLocalData();
+    return NextResponse.json({
+      floors: localData.floors,
+      source: "local-file",
+    });
+  }
+
   const buildingCol = db.collection("buildingData");
   const auditCol = db.collection<AuditLog>("auditLogs");
 
@@ -13,7 +25,7 @@ export async function GET() {
   });
 
   if (existing?.floors) {
-    return NextResponse.json({ floors: existing.floors });
+    return NextResponse.json({ floors: existing.floors, source: "db" });
   }
 
   await buildingCol.updateOne(
@@ -33,6 +45,6 @@ export async function GET() {
     at: new Date(),
   });
 
-  return NextResponse.json({ floors: defaultBuildingData });
+  return NextResponse.json({ floors: defaultBuildingData, source: "seed" });
 }
 

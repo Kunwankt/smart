@@ -1,10 +1,17 @@
 import { NextRequest } from "next/server";
 
 export function isAdminRequest(req: NextRequest) {
-  const expected = process.env.ADMIN_API_KEY;
+  const expected = normalizeKey(process.env.ADMIN_API_KEY);
   if (!expected) return false;
-  const provided = req.headers.get("x-admin-key");
+  const provided = normalizeKey(req.headers.get("x-admin-key"));
   return Boolean(provided && timingSafeEqualStrings(provided, expected));
+}
+
+function normalizeKey(value: string | null | undefined) {
+  if (!value) return "";
+  const trimmed = value.trim();
+  // Handle values that accidentally include surrounding quotes.
+  return trimmed.replace(/^"(.*)"$/, "$1").replace(/^'(.*)'$/, "$1").trim();
 }
 
 function timingSafeEqualStrings(a: string, b: string) {
