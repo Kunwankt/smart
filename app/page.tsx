@@ -6,6 +6,8 @@ import { FloorMap } from "@/components/floor-map";
 import { NavigationSidebar } from "@/components/navigation-sidebar";
 import { RoomDialog } from "@/components/room-dialog";
 import { CoordinatePicker } from "@/components/coordinate-picker";
+import { db } from "@/lib/firebase";
+import { doc, setDoc } from "firebase/firestore";
 import {
   Room,
   Floor,
@@ -85,6 +87,20 @@ export default function IndoorNavPage() {
       try {
         setSaveStatus("saving");
         setSaveError(null);
+
+        // 1. Sync to Firestore (Real-time cloud backup)
+        try {
+          await setDoc(doc(db, "building", "cb_building"), {
+            floors: nextFloors,
+            updatedAt: new Date().toISOString(),
+          });
+          console.log("✅ Successfully synced to Firebase Firestore");
+        } catch (fsErr) {
+          console.error("❌ Firebase sync failed:", fsErr);
+          // We continue with the main API save even if Firebase fails
+        }
+
+        // 2. Original API Save (MongoDB)
         const res = await fetch("/api/admin/building", {
           method: "PUT",
           headers: {

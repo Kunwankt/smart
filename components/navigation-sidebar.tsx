@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Search, MapPin, Navigation, Plus, MousePointer, RotateCcw } from "lucide-react";
+import { Search, MapPin, Navigation, Plus, MousePointer, RotateCcw, Database } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { db } from "@/lib/firebase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -193,13 +194,19 @@ export function NavigationSidebar({
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-medium flex items-center justify-between">
             Admin Controls
-            <Badge
-              variant={isAdminMode ? "default" : "secondary"}
-              className="cursor-pointer"
-              onClick={handleAdminBadgeClick}
-            >
-              {isAdminMode ? "Admin: ON" : "Admin: OFF (click)"}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                <Database className="h-3 w-3 text-green-500" />
+                Firebase
+              </div>
+              <Badge
+                variant={isAdminMode ? "default" : "secondary"}
+                className="cursor-pointer"
+                onClick={handleAdminBadgeClick}
+              >
+                {isAdminMode ? "Admin: ON" : "Admin: OFF (click)"}
+              </Badge>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
