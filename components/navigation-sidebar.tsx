@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Search, MapPin, Navigation, Plus, MousePointer, RotateCcw } from "lucide-react";
+import { Search, MapPin, Navigation, Plus, MousePointer, RotateCcw, LogIn, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { auth } from "@/lib/firebase";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -84,46 +86,61 @@ export function NavigationSidebar({
 }: NavigationSidebarProps) {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [adminDialogOpen, setAdminDialogOpen] = useState(false);
+  const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [adminError, setAdminError] = useState<string | null>(null);
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
   const [exitBusy, setExitBusy] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleAdminBadgeClick = () => {
+  const handleAdminBadgeClick = async () => {
     if (isAdminMode) {
       if (hasUnsavedChanges || saveStatus === "saving") {
         setExitConfirmOpen(true);
         return;
       }
-      onAdminLogout();
+      try {
+        await signOut(auth);
+        onAdminLogout();
+      } catch (err: any) {
+        console.error("Logout error", err);
+      }
       return;
     }
+    setAdminEmail("");
     setAdminPassword("");
     setAdminError(null);
     setAdminDialogOpen(true);
   };
 
-  const handleAdminLogin = () => {
-    // Use only the environment variable, no hardcoded fallback
-    const expectedKey = process.env.NEXT_PUBLIC_ADMIN_KEY;
-    
-    if (!expectedKey) {
-      setAdminError("Admin key not configured. Set NEXT_PUBLIC_ADMIN_KEY in .env.local");
-      return;
-    }
-    
-    if (adminPassword !== expectedKey) {
-      setAdminError("Wrong admin password.");
-      return;
-    }
-    setAdminDialogOpen(false);
-    setAdminPassword("");
+  const handleAdminLogin = async () => {
+    setIsLoading(true);
     setAdminError(null);
-    onAdminLogin(expectedKey);
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
+      const token = await userCredential.user.getIdToken();
+      
+      setAdminDialogOpen(false);
+      setAdminEmail("");
+      setAdminPassword("");
+      onAdminLogin(token);
+    } catch (err: any) {
+      setAdminError(err.message || "Login failed");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="w-80 flex flex-col gap-4 h-full overflow-y-auto">
+      {auth.currentUser && (
+        <div className="px-4 py-2 bg-muted rounded-md flex items-center justify-between text-xs">
+          <span className="truncate">Logged in: {auth.currentUser.email}</span>
+          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleAdminBadgeClick}>
+            <LogOut className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
       {/* Search */}
       <Card>
         <CardHeader className="pb-3">
@@ -416,43 +433,49 @@ export function NavigationSidebar({
       )}
 
       <Dialog open={adminDialogOpen} onOpenChange={setAdminDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Admin login</DialogTitle>
+            <DialogTitle>Admin Login</DialogTitle>
             <DialogDescription>
-              Enter the admin password to enable Admin Mode.
+              Enter your credentials to enable admin controls.
             </DialogDescription>
           </DialogHeader>
-
-          <div className="space-y-2">
-            <Input
-              type="password"
-              placeholder="Admin password"
-              value={adminPassword}
-              onChange={(e) => {
-                setAdminPassword(e.target.value);
-                setAdminError(null);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleAdminLogin();
-              }}
-              autoFocus
-            />
-            {adminError && <p className="text-sm text-destructive">{adminError}</p>}
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Email</label>
+              <Input
+                type="email"
+                placeholder="admin@example.com"
+                value={adminEmail}
+                onChange={(e) => setAdminEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Password</label>
+              <Input
+                type="password"
+                placeholder="••••••••"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()}
+              />
+            </div>
+            {adminError && (
+              <p className="text-xs text-destructive font-medium">{adminError}</p>
+            )}
           </div>
-
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => {
-                setAdminDialogOpen(false);
-                setAdminPassword("");
-                setAdminError(null);
-              }}
+              onClick={() => setAdminDialogOpen(false)}
+              disabled={isLoading}
             >
               Cancel
             </Button>
-            <Button onClick={handleAdminLogin}>Enter Admin Mode</Button>
+            <Button onClick={handleAdminLogin} disabled={isLoading}>
+              {isLoading ? "Logging in..." : "Login"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

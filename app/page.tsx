@@ -6,6 +6,9 @@ import { FloorMap } from "@/components/floor-map";
 import { NavigationSidebar } from "@/components/navigation-sidebar";
 import { RoomDialog } from "@/components/room-dialog";
 import { CoordinatePicker } from "@/components/coordinate-picker";
+import { auth, db } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
 import {
   Room,
   Floor,
@@ -55,6 +58,17 @@ export default function IndoorNavPage() {
 
   // Load floors from DB on startup
   useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const token = await user.getIdToken();
+        setAdminKey(token);
+        setIsAdminMode(true);
+      } else {
+        setAdminKey(null);
+        setIsAdminMode(false);
+      }
+    });
+
     let cancelled = false;
     (async () => {
       try {
@@ -76,6 +90,7 @@ export default function IndoorNavPage() {
     })();
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, []);
 
@@ -85,6 +100,20 @@ export default function IndoorNavPage() {
       try {
         setSaveStatus("saving");
         setSaveError(null);
+
+        // 1. Sync to Firestore (Real-time DB)
+        try {
+          await setDoc(doc(db, "building", "cb_building"), {
+            floors: nextFloors,
+            updatedAt: new Date().toISOString(),
+          });
+          console.log("Synced to Firestore");
+        } catch (fsErr) {
+          console.error("Firestore sync failed:", fsErr);
+          // Don't fail the whole save if Firestore fails, but log it
+        }
+
+        // 2. Original API Save (MongoDB)
         const res = await fetch("/api/admin/building", {
           method: "PUT",
           headers: {
