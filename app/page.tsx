@@ -169,16 +169,13 @@ export default function IndoorNavPage() {
       if (result) {
         setPathResult(result);
         setNavigationSteps(result.steps);
+        setSaveError(null); // Clear any previous errors
       } else {
         setPathResult(null);
-        setNavigationSteps([
-          {
-            instruction:
-              "No path found. Admin needs to connect rooms (connections).",
-            distance: 0,
-            floor: room.floor,
-          },
-        ]);
+        setNavigationSteps([]);
+        setSaveError(`No path found between ${fromRoom.name} and ${room.name}. They might not be connected in the database.`);
+        // Reset selection after a short delay so user can try again
+        setTimeout(() => setSaveError(null), 5000);
       }
     },
     [isAdminMode, fromRoom, floors]
@@ -232,10 +229,16 @@ export default function IndoorNavPage() {
     if (result) {
       setPathResult(result);
       setNavigationSteps(result.steps);
+      setSaveError(null);
       // Switch to the starting floor
       if (fromRoom.floor !== selectedFloor) {
         setSelectedFloor(fromRoom.floor);
       }
+    } else {
+      setPathResult(null);
+      setNavigationSteps([]);
+      setSaveError(`Path could not be calculated. Please check room connections.`);
+      setTimeout(() => setSaveError(null), 4000);
     }
   }, [fromRoom, toRoom, floors, selectedFloor]);
 

@@ -148,11 +148,11 @@ function isConnector(room: Room) {
 }
 
 function connectorKey(roomId: string) {
-  // Examples:
-  // - lift_left_g -> lift_left
-  // - lift_left_1 -> lift_left
-  // - stairs_left_3 -> stairs_left
-  return roomId.replace(/_(g|\d+)$/i, "");
+  // Matches patterns like:
+  // - lift_left_g, lift_left_1, lift_left_2 -> lift_left
+  // - stairs_0, stairs_1 -> stairs
+  // - elevator_a_g, elevator_a_1 -> elevator_a
+  return roomId.replace(/(_(g|\d+))?$/i, "").replace(/_$/, "");
 }
 
 function buildRoomIndex(floors: Floor[]) {
@@ -172,15 +172,20 @@ function buildAdjacency(floors: Floor[]) {
     neighbors.set(from, list);
   };
 
-  // Same-floor edges (walkable), treated as undirected for navigation.
+  // Same-floor and cross-floor explicit edges
   for (const room of allRooms) {
     for (const connId of room.connections) {
       const neighbor = roomById.get(connId);
       if (!neighbor) continue;
-      if (neighbor.floor !== room.floor) continue;
+      
       const w = calculateDistance(room, neighbor);
-      addEdge(room.id, neighbor.id, w);
-      addEdge(neighbor.id, room.id, w);
+      // If they are on different floors, add a vertical cost
+      const floorA = floorLevelById.get(room.floor) ?? 0;
+      const floorB = floorLevelById.get(neighbor.floor) ?? 0;
+      const verticalCost = Math.abs(floorA - floorB) * 15; // 15 steps per floor
+      
+      addEdge(room.id, neighbor.id, w + verticalCost);
+      addEdge(neighbor.id, room.id, w + verticalCost);
     }
   }
 
