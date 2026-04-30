@@ -5,198 +5,21 @@
       "name": "Ground",
       "level": 0,
       "rooms": [
-        {
-          "id": "main_gate",
-          "name": "Main Gate",
-          "floor": "ground",
-          "x": 400,
-          "y": 700,
-          "width": 120,
-          "height": 60,
-          "type": "gate",
-          "connections": [
-            "help_desk"
-          ]
-        },
-        {
-          "id": "help_desk",
-          "name": "Help Desk",
-          "floor": "ground",
-          "x": 400,
-          "y": 600,
-          "width": 140,
-          "height": 50,
-          "type": "desk",
-          "connections": [
-            "main_gate",
-            "center_gate_left"
-          ]
-        },
-        {
-          "id": "center_gate_left",
-          "name": "Center Gate (Entry)",
-          "floor": "ground",
-          "x": 400,
-          "y": 350,
-          "width": 100,
-          "height": 60,
-          "type": "gate",
-          "connections": [
-            "help_desk",
-            "colonel",
-            "lift_left_g",
-            "stairs_left_g"
-          ]
-        },
-        {
-          "id": "center_gate_right",
-          "name": "Center Gate (Exit)",
-          "floor": "ground",
-          "x": 500,
-          "y": 350,
-          "width": 100,
-          "height": 60,
-          "type": "gate",
-          "connections": []
-        },
-        {
-          "id": "lift_left_g",
-          "name": "Lift (Left)",
-          "floor": "ground",
-          "x": 300,
-          "y": 350,
-          "width": 60,
-          "height": 60,
-          "type": "stairs-lift",
-          "connections": [
-            "center_gate_left"
-          ]
-        },
-        {
-          "id": "stairs_left_g",
-          "name": "Stairs (Left)",
-          "floor": "ground",
-          "x": 230,
-          "y": 350,
-          "width": 60,
-          "height": 60,
-          "type": "stairs-lift",
-          "connections": [
-            "center_gate_left"
-          ]
-        },
-        {
-          "id": "lift_right_g",
-          "name": "Lift (Right)",
-          "floor": "ground",
-          "x": 640,
-          "y": 350,
-          "width": 60,
-          "height": 60,
-          "type": "stairs-lift",
-          "connections": []
-        },
-        {
-          "id": "stairs_right_g",
-          "name": "Stairs (Right)",
-          "floor": "ground",
-          "x": 710,
-          "y": 350,
-          "width": 60,
-          "height": 60,
-          "type": "stairs-lift",
-          "connections": []
-        },
-        {
-          "id": "exit_left",
-          "name": "Exit (Left End)",
-          "floor": "ground",
-          "x": 20,
-          "y": 80,
-          "width": 80,
-          "height": 80,
-          "type": "gate",
-          "connections": []
-        },
-        {
-          "id": "washroom_girls",
-          "name": "Washroom (Girls)",
-          "floor": "ground",
-          "x": 110,
-          "y": 80,
-          "width": 120,
-          "height": 80,
-          "type": "washroom",
-          "connections": []
-        },
-        {
-          "id": "colonel",
-          "name": "Colonel",
-          "floor": "ground",
-          "x": 72,
-          "y": 200,
-          "width": 120,
-          "height": 80,
-          "type": "office",
-          "connections": [
-            "center_gate_left"
-          ]
-        },
-        {
-          "id": "room_011",
-          "name": "011 Room",
-          "floor": "ground",
-          "x": 410,
-          "y": 80,
-          "width": 100,
-          "height": 80,
-          "type": "office",
-          "connections": []
-        },
-        {
-          "id": "executive_hall",
-          "name": "012 Executive Hall",
-          "floor": "ground",
-          "x": 530,
-          "y": 80,
-          "width": 160,
-          "height": 80,
-          "type": "office",
-          "connections": []
-        },
-        {
-          "id": "washroom_male",
-          "name": "Washroom (Male)",
-          "floor": "ground",
-          "x": 710,
-          "y": 80,
-          "width": 120,
-          "height": 80,
-          "type": "washroom",
-          "connections": []
-        },
-        {
-          "id": "audi_sv",
-          "name": "Audi SV",
-          "floor": "ground",
-          "x": 860,
-          "y": 50,
-          "width": 100,
-          "height": 200,
-          "type": "audi",
-          "connections": []
-        },
-        {
-          "id": "room-1777533629534",
-          "name": "CBxyz",
-          "floor": "ground",
-          "x": 770,
-          "y": 565,
-          "width": 97,
-          "height": 70,
-          "type": "room",
-          "connections": []
-        }
+        { "id": "main_gate", "name": "Main Gate", "floor": "ground", "x": 400, "y": 700, "width": 120, "height": 60, "type": "gate", "connections": ["help_desk"] },
+        { "id": "help_desk", "name": "Help Desk", "floor": "ground", "x": 400, "y": 600, "width": 140, "height": 50, "type": "desk", "connections": ["main_gate", "center_gate_left"] },
+        { "id": "center_gate_left", "name": "Center Gate (Entry)", "floor": "ground", "x": 400, "y": 350, "width": 100, "height": 60, "type": "gate", "connections": ["help_desk", "colonel", "lift_left_g", "stairs_left_g", "room_011"] },
+        { "id": "center_gate_right", "name": "Center Gate (Exit)", "floor": "ground", "x": 500, "y": 350, "width": 100, "height": 60, "type": "gate", "connections": [] },
+        { "id": "lift_left_g", "name": "Lift (Left)", "floor": "ground", "x": 300, "y: 350", "width": 60, "height": 60, "type": "stairs-lift", "connections": ["center_gate_left"] },
+        { "id": "stairs_left_g", "name": "Stairs (Left)", "floor": "ground", "x": 230, "y: 350", "width": 60, "height": 60, "type": "stairs-lift", "connections": ["center_gate_left"] },
+        { "id": "lift_right_g", "name": "Lift (Right)", "floor": "ground", "x": 640, "y: 350", "width": 60, "height": 60, "type": "stairs-lift", "connections": [] },
+        { "id": "stairs_right_g", "name": "Stairs (Right)", "floor": "ground", "x": 710, "y: 350", "width": 60, "height": 60, "type": "stairs-lift", "connections": [] },
+        { "id": "exit_left", "name": "Exit (Left End)", "floor": "ground", "x": 20, "y: 80", "width": 80, "height": 80, "type": "gate", "connections": [] },
+        { "id": "washroom_girls", "name": "Washroom (Girls)", "floor": "ground", "x": 110, "y: 80", "width": 120, "height": 80, "type": "washroom", "connections": [] },
+        { "id": "colonel", "name": "Colonel", "floor": "ground", "x": 110, "y: 310", "width": 120, "height": 80, "type": "office", "connections": ["center_gate_left"] },
+        { "id": "room_011", "name": "011 Room", "floor": "ground", "x": 410, "y: 80", "width": 100, "height": 80, "type": "office", "connections": ["center_gate_left", "executive_hall"] },
+        { "id": "executive_hall", "name": "012 Executive Hall", "floor": "ground", "x": 530, "y: 80", "width": 160, "height": 80, "type": "office", "connections": ["room_011", "washroom_male"] },
+        { "id": "washroom_male", "name": "Washroom (Male)", "floor": "ground", "x": 710, "y: 80", "width": 120, "height": 80, "type": "washroom", "connections": ["executive_hall", "audi_sv"] },
+        { "id": "audi_sv", "name": "Audi SV", "floor": "ground", "x": 860, "y: 50", "width": 100, "height": 200, "type": "audi", "connections": ["washroom_male"] }
       ]
     },
     {
@@ -204,60 +27,10 @@
       "name": "1st Floor",
       "level": 1,
       "rooms": [
-        {
-          "id": "lift_left_1",
-          "name": "Lift (Left)",
-          "floor": "1st",
-          "x": 300,
-          "y": 350,
-          "width": 60,
-          "height": 60,
-          "type": "stairs-lift",
-          "connections": [
-            "hod",
-            "staff1"
-          ]
-        },
-        {
-          "id": "stairs_left_1",
-          "name": "Stairs (Left)",
-          "floor": "1st",
-          "x": 230,
-          "y": 350,
-          "width": 60,
-          "height": 60,
-          "type": "stairs-lift",
-          "connections": [
-            "hod",
-            "staff1"
-          ]
-        },
-        {
-          "id": "hod",
-          "name": "HOD Office",
-          "floor": "1st",
-          "x": 50,
-          "y": 50,
-          "width": 150,
-          "height": 150,
-          "type": "office",
-          "connections": [
-            "lift_left_1"
-          ]
-        },
-        {
-          "id": "staff1",
-          "name": "Staff Room A",
-          "floor": "1st",
-          "x": 210,
-          "y": 50,
-          "width": 150,
-          "height": 150,
-          "type": "office",
-          "connections": [
-            "lift_left_1"
-          ]
-        }
+        { "id": "lift_left_1", "name": "Lift (Left)", "floor": "1st", "x": 300, "y": 350, "width": 60, "height": 60, "type": "stairs-lift", "connections": ["hod", "staff1"] },
+        { "id": "stairs_left_1", "name": "Stairs (Left)", "floor": "1st", "x": 230, "y": 350, "width": 60, "height": 60, "type": "stairs-lift", "connections": ["hod", "staff1"] },
+        { "id": "hod", "name": "HOD Office", "floor": "1st", "x": 50, "y": 50, "width": 150, "height": 150, "type": "office", "connections": ["lift_left_1"] },
+        { "id": "staff1", "name": "Staff Room A", "floor": "1st", "x": 210, "y": 50, "width": 150, "height": 150, "type": "office", "connections": ["lift_left_1"] }
       ]
     },
     {
@@ -265,45 +38,9 @@
       "name": "2nd Floor",
       "level": 2,
       "rooms": [
-        {
-          "id": "lift_left_2",
-          "name": "Lift (Left)",
-          "floor": "2nd",
-          "x": 300,
-          "y": 350,
-          "width": 60,
-          "height": 60,
-          "type": "stairs-lift",
-          "connections": [
-            "lab1"
-          ]
-        },
-        {
-          "id": "stairs_left_2",
-          "name": "Stairs (Left)",
-          "floor": "2nd",
-          "x": 230,
-          "y": 350,
-          "width": 60,
-          "height": 60,
-          "type": "stairs-lift",
-          "connections": [
-            "lab1"
-          ]
-        },
-        {
-          "id": "lab1",
-          "name": "Computer Lab 1",
-          "floor": "2nd",
-          "x": 50,
-          "y": 50,
-          "width": 150,
-          "height": 150,
-          "type": "lab",
-          "connections": [
-            "lift_left_2"
-          ]
-        }
+        { "id": "lift_left_2", "name": "Lift (Left)", "floor": "2nd", "x": 300, "y": 350, "width": 60, "height": 60, "type": "stairs-lift", "connections": ["lab1"] },
+        { "id": "stairs_left_2", "name": "Stairs (Left)", "floor": "2nd", "x": 230, "y": 350, "width": 60, "height": 60, "type": "stairs-lift", "connections": ["lab1"] },
+        { "id": "lab1", "name": "Computer Lab 1", "floor": "2nd", "x": 50, "y": 50, "width": 150, "height": 150, "type": "office", "connections": ["lift_left_2"] }
       ]
     },
     {
@@ -311,45 +48,9 @@
       "name": "3rd Floor",
       "level": 3,
       "rooms": [
-        {
-          "id": "lift_left_3",
-          "name": "Lift (Left)",
-          "floor": "3rd",
-          "x": 300,
-          "y": 350,
-          "width": 60,
-          "height": 60,
-          "type": "stairs-lift",
-          "connections": [
-            "cr1"
-          ]
-        },
-        {
-          "id": "stairs_left_3",
-          "name": "Stairs (Left)",
-          "floor": "3rd",
-          "x": 230,
-          "y": 350,
-          "width": 60,
-          "height": 60,
-          "type": "stairs-lift",
-          "connections": [
-            "cr1"
-          ]
-        },
-        {
-          "id": "cr1",
-          "name": "Classroom 301",
-          "floor": "3rd",
-          "x": 50,
-          "y": 50,
-          "width": 150,
-          "height": 150,
-          "type": "classroom",
-          "connections": [
-            "lift_left_3"
-          ]
-        }
+        { "id": "lift_left_3", "name": "Lift (Left)", "floor": "3rd", "x": 300, "y": 350, "width": 60, "height": 60, "type": "stairs-lift", "connections": ["cr1"] },
+        { "id": "stairs_left_3", "name": "Stairs (Left)", "floor": "3rd", "x": 230, "y": 350, "width": 60, "height": 60, "type": "stairs-lift", "connections": ["cr1"] },
+        { "id": "cr1", "name": "Classroom 301", "floor": "3rd", "x": 50, "y": 50, "width": 150, "height": 150, "type": "office", "connections": ["lift_left_3"] }
       ]
     },
     {
@@ -357,45 +58,9 @@
       "name": "4th Floor",
       "level": 4,
       "rooms": [
-        {
-          "id": "lift_left_4",
-          "name": "Lift (Left)",
-          "floor": "4th",
-          "x": 300,
-          "y": 350,
-          "width": 60,
-          "height": 60,
-          "type": "stairs-lift",
-          "connections": [
-            "auditorium"
-          ]
-        },
-        {
-          "id": "stairs_left_4",
-          "name": "Stairs (Left)",
-          "floor": "4th",
-          "x": 230,
-          "y": 350,
-          "width": 60,
-          "height": 60,
-          "type": "stairs-lift",
-          "connections": [
-            "auditorium"
-          ]
-        },
-        {
-          "id": "auditorium",
-          "name": "Auditorium",
-          "floor": "4th",
-          "x": 50,
-          "y": 50,
-          "width": 700,
-          "height": 150,
-          "type": "audi",
-          "connections": [
-            "lift_left_4"
-          ]
-        }
+        { "id": "lift_left_4", "name": "Lift (Left)", "floor": "4th", "x": 300, "y": 350, "width": 60, "height": 60, "type": "stairs-lift", "connections": ["auditorium"] },
+        { "id": "stairs_left_4", "name": "Stairs (Left)", "floor": "4th", "x": 230, "y": 350, "width": 60, "height": 60, "type": "stairs-lift", "connections": ["auditorium"] },
+        { "id": "auditorium", "name": "Auditorium", "floor": "4th", "x": 50, "y": 50, "width": 700, "height": 150, "type": "audi", "connections": ["lift_left_4"] }
       ]
     },
     {
@@ -403,47 +68,10 @@
       "name": "5th Floor",
       "level": 5,
       "rooms": [
-        {
-          "id": "lift_left_5",
-          "name": "Lift (Left)",
-          "floor": "5th",
-          "x": 300,
-          "y": 350,
-          "width": 60,
-          "height": 60,
-          "type": "stairs-lift",
-          "connections": [
-            "library"
-          ]
-        },
-        {
-          "id": "stairs_left_5",
-          "name": "Stairs (Left)",
-          "floor": "5th",
-          "x": 230,
-          "y": 350,
-          "width": 60,
-          "height": 60,
-          "type": "stairs-lift",
-          "connections": [
-            "library"
-          ]
-        },
-        {
-          "id": "library",
-          "name": "Main Library",
-          "floor": "5th",
-          "x": 50,
-          "y": 50,
-          "width": 500,
-          "height": 400,
-          "type": "office",
-          "connections": [
-            "lift_left_5"
-          ]
-        }
+        { "id": "lift_left_5", "name": "Lift (Left)", floor: "5th", "x": 300, "y": 350, width: 60, height: 60, type: "stairs-lift", connections: ["library"] },
+        { "id": "stairs_left_5", "name": "Stairs (Left)", floor: "5th", "x": 230, "y": 350, width: 60, height: 60, type: "stairs-lift", connections: ["library"] },
+        { "id": "library", "name": "Main Library", floor: "5th", "x": 50, "y": 50, width: 500, height: 400, type: "office", connections: ["lift_left_5"] }
       ]
     }
-  ],
-  "updatedAt": "2026-04-30T07:28:11.262Z"
+  ]
 }
