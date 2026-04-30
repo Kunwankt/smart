@@ -84,23 +84,25 @@ export default function IndoorNavPage() {
   const performSave = useCallback(
     async (nextFloors: Floor[]) => {
       if (!adminKey) return false;
+      
+      // Use a timeout to prevent infinite "Saving..." state
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
       try {
         setSaveStatus("saving");
         setSaveError(null);
 
-        // 1. Sync to Firestore (Real-time cloud backup)
-        try {
-          await setDoc(doc(db, "building", "cb_building"), {
-            floors: nextFloors,
-            updatedAt: new Date().toISOString(),
-          });
-          console.log("✅ Successfully synced to Firebase Firestore");
-        } catch (fsErr) {
-          console.error("❌ Firebase sync failed:", fsErr);
-          // We continue with the main API save even if Firebase fails
-        }
+        // 1. Non-blocking Firestore Sync (Real-time cloud backup)
+        // We don't await this to prevent it from hanging the main save process
+        setDoc(doc(db, "building", "cb_building"), {
+          floors: nextFloors,
+          updatedAt: new Date().toISOString(),
+        })
+          .then(() => console.log("✅ Successfully synced to Firebase Firestore"))
+          .catch((err) => console.error("❌ Firebase sync failed (background):", err));
 
-        // 2. Original API Save (MongoDB)
+        // 2. Original API Save (Local JSON/MongoDB)
         const res = await fetch("/api/admin/building", {
           method: "PUT",
           headers: {
@@ -108,13 +110,16 @@ export default function IndoorNavPage() {
             "x-admin-key": adminKey,
           },
           body: JSON.stringify({ floors: nextFloors }),
+          signal: controller.signal,
         });
+
+        clearTimeout(timeoutId);
+
         if (!res.ok) {
           const data = await res.json().catch(() => null);
           setSaveStatus("idle");
-          // If it's a 404, the API route might be missing or wrongly named
           const errorMessage = res.status === 404 
-            ? "Save failed (API route not found). Please check if /api/admin/building/route.ts exists."
+            ? "Save failed (API route not found)."
             : (data?.error || `Save failed (HTTP ${res.status})`);
           setSaveError(errorMessage);
           return false;
@@ -125,9 +130,14 @@ export default function IndoorNavPage() {
         setSaveStatus("saved");
         window.setTimeout(() => setSaveStatus("idle"), 1200);
         return true;
-      } catch {
+      } catch (err: any) {
+        clearTimeout(timeoutId);
         setSaveStatus("idle");
-        setSaveError("Save failed (network). Is the server running?");
+        if (err.name === 'AbortError') {
+          setSaveError("Save timed out. Check your internet connection.");
+        } else {
+          setSaveError("Save failed (network error).");
+        }
         return false;
       }
     },
