@@ -23,7 +23,6 @@ export interface Room {
     | "fire"
     | "faculty";
   connections: string[];
-  customPath?: { x: number; y: number }[];
 }
 
 export interface Floor {
@@ -61,20 +60,20 @@ export const defaultBuildingData: Floor[] = [
     rooms: [
       { id: "main_gate", name: "Main Gate", floor: "ground", x: 400, y: 700, width: 120, height: 60, type: "gate", connections: ["help_desk"] },
       { id: "help_desk", name: "Help Desk", floor: "ground", x: 400, y: 600, width: 140, height: 50, type: "desk", connections: ["main_gate", "center_gate_left"] },
-      { id: "center_gate_left", name: "Center Gate (Entry)", floor: "ground", x: 400, y: 350, width: 100, height: 60, type: "gate", connections: ["help_desk", "colonel", "lift_left_g", "stairs_left_g", "room_011"] },
+      { id: "center_gate_left", name: "Center Gate (Entry)", floor: "ground", x: 400, y: 350, width: 100, height: 60, type: "gate", connections: ["help_desk", "colonel", "lift_left_g", "stairs_left_g"] },
       { id: "center_gate_right", name: "Center Gate (Exit)", floor: "ground", x: 500, y: 350, width: 100, height: 60, type: "gate", connections: [] },
       { id: "lift_left_g", name: "Lift (Left)", floor: "ground", x: 300, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["center_gate_left"] },
       { id: "stairs_left_g", name: "Stairs (Left)", floor: "ground", x: 230, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["center_gate_left"] },
       { id: "lift_right_g", name: "Lift (Right)", floor: "ground", x: 640, y: 350, width: 60, height: 60, type: "stairs-lift", connections: [] },
       { id: "stairs_right_g", name: "Stairs (Right)", floor: "ground", x: 710, y: 350, width: 60, height: 60, type: "stairs-lift", connections: [] },
-      
+
       { id: "exit_left", name: "Exit (Left End)", floor: "ground", x: 20, y: 80, width: 80, height: 80, type: "gate", connections: [] },
       { id: "washroom_girls", name: "Washroom (Girls)", floor: "ground", x: 110, y: 80, width: 120, height: 80, type: "washroom", connections: [] },
       { id: "colonel", name: "Colonel", floor: "ground", x: 110, y: 310, width: 120, height: 80, type: "office", connections: ["center_gate_left"] },
-      { id: "room_011", name: "011 Room", floor: "ground", x: 410, y: 80, width: 100, height: 80, type: "office", connections: ["center_gate_left", "executive_hall"] },
-      { id: "executive_hall", name: "012 Executive Hall", floor: "ground", x: 530, y: 80, width: 160, height: 80, type: "office", connections: ["room_011", "washroom_male"] },
-      { id: "washroom_male", name: "Washroom (Male)", floor: "ground", x: 710, y: 80, width: 120, height: 80, type: "washroom", connections: ["executive_hall", "audi_sv"] },
-      { id: "audi_sv", name: "Audi SV", floor: "ground", x: 860, y: 50, width: 100, height: 200, type: "audi", connections: ["washroom_male"] },
+      { id: "room_011", name: "011 Room", floor: "ground", x: 410, y: 80, width: 100, height: 80, type: "office", connections: [] },
+      { id: "executive_hall", name: "012 Executive Hall", floor: "ground", x: 530, y: 80, width: 160, height: 80, type: "office", connections: [] },
+      { id: "washroom_male", name: "Washroom (Male)", floor: "ground", x: 710, y: 80, width: 120, height: 80, type: "washroom", connections: [] },
+      { id: "audi_sv", name: "Audi SV", floor: "ground", x: 860, y: 50, width: 100, height: 200, type: "audi", connections: [] },
     ],
   },
   {
@@ -95,7 +94,7 @@ export const defaultBuildingData: Floor[] = [
     rooms: [
       { id: "lift_left_2", name: "Lift (Left)", floor: "2nd", x: 300, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["lab1"] },
       { id: "stairs_left_2", name: "Stairs (Left)", floor: "2nd", x: 230, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["lab1"] },
-      { id: "lab1", name: "Computer Lab 1", floor: "2nd", x: 50, y: 50, width: 150, height: 150, type: "office", connections: ["lift_left_2"] },
+      { id: "lab1", name: "Computer Lab 1", floor: "2nd", x: 50, y: 50, width: 150, height: 150, type: "lab", connections: ["lift_left_2"] },
     ],
   },
   {
@@ -105,7 +104,7 @@ export const defaultBuildingData: Floor[] = [
     rooms: [
       { id: "lift_left_3", name: "Lift (Left)", floor: "3rd", x: 300, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["cr1"] },
       { id: "stairs_left_3", name: "Stairs (Left)", floor: "3rd", x: 230, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["cr1"] },
-      { id: "cr1", name: "Classroom 301", floor: "3rd", x: 50, y: 50, width: 150, height: 150, type: "office", connections: ["lift_left_3"] },
+      { id: "cr1", name: "Classroom 301", floor: "3rd", x: 50, y: 50, width: 150, height: 150, type: "classroom", connections: ["lift_left_3"] },
     ],
   },
   {
@@ -149,11 +148,11 @@ function isConnector(room: Room) {
 }
 
 function connectorKey(roomId: string) {
-  // Matches patterns like:
-  // - lift_left_g, lift_left_1, lift_left_2 -> lift_left
-  // - stairs_0, stairs_1 -> stairs
-  // - elevator_a_g, elevator_a_1 -> elevator_a
-  return roomId.replace(/(_(g|\d+))?$/i, "").replace(/_$/, "");
+  // Examples:
+  // - lift_left_g -> lift_left
+  // - lift_left_1 -> lift_left
+  // - stairs_left_3 -> stairs_left
+  return roomId.replace(/_(g|\d+)$/i, "");
 }
 
 function buildRoomIndex(floors: Floor[]) {
@@ -173,20 +172,15 @@ function buildAdjacency(floors: Floor[]) {
     neighbors.set(from, list);
   };
 
-  // Same-floor and cross-floor explicit edges
+  // Same-floor edges (walkable), treated as undirected for navigation.
   for (const room of allRooms) {
     for (const connId of room.connections) {
       const neighbor = roomById.get(connId);
       if (!neighbor) continue;
-      
+      if (neighbor.floor !== room.floor) continue;
       const w = calculateDistance(room, neighbor);
-      // If they are on different floors, add a vertical cost
-      const floorA = floorLevelById.get(room.floor) ?? 0;
-      const floorB = floorLevelById.get(neighbor.floor) ?? 0;
-      const verticalCost = Math.abs(floorA - floorB) * 15; // 15 steps per floor
-      
-      addEdge(room.id, neighbor.id, w + verticalCost);
-      addEdge(neighbor.id, room.id, w + verticalCost);
+      addEdge(room.id, neighbor.id, w);
+      addEdge(neighbor.id, room.id, w);
     }
   }
 

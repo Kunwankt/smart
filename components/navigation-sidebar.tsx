@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { Search, MapPin, Navigation, Plus, MousePointer, RotateCcw, Database } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, MapPin, Navigation, Plus, MousePointer, RotateCcw, Database, Wifi, WifiOff, Info, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { db } from "@/lib/firebase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { db, enableNetwork } from "@/lib/firebase";
+import { onSnapshot, doc } from "firebase/firestore";
+
 import {
   Dialog,
   DialogContent,
@@ -89,406 +91,382 @@ export function NavigationSidebar({
   const [adminError, setAdminError] = useState<string | null>(null);
   const [exitConfirmOpen, setExitConfirmOpen] = useState(false);
   const [exitBusy, setExitBusy] = useState(false);
+  const [isFirebaseConnected, setIsFirebaseConnected] = useState<boolean | null>(null);
+  const [showDiag, setShowDiag] = useState(false);
+  const [isAdBlockDetected, setIsAdBlockDetected] = useState(false);
+  const [isReconnecting, setIsReconnecting] = useState(false);
+
+  const firebaseDiag = {
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "MISSING",
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY ? "SET (OK)" : "MISSING",
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID ? "SET (OK)" : "MISSING",
+    databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL ? "SET (OK)" : "NOT SET",
+  };
+
+  const handleReconnect = async () => {
+    if (!db) return;
+    setIsReconnecting(true);
+    try {
+      await enableNetwork(db);
+      console.log("Network enabled manually");
+    } catch (err) {
+      console.error("Failed to enable network manually:", err);
+    } finally {
+      setTimeout(() => setIsReconnecting(false), 1000);
+    }
+  };
+
+  useEffect(() => {
+    if (!db) {
+      setIsFirebaseConnected(false);
+      return;
+    }
+    // Check connection status by listening to a document
+    const unsub = onSnapshot(
+      doc(db, "building", "cb_building"),
+      { includeMetadataChanges: true },
+      (snapshot) => {
+        setIsFirebaseConnected(!snapshot.metadata.fromCache);
+        setIsAdBlockDetected(false);
+      },
+      (error: any) => {
+        console.warn("Firebase connection status check failed:", error);
+        setIsFirebaseConnected(false);
+        // Detect if blocked by client (ad-blocker)
+        if (error.message?.includes("blocked-by-client") || error.code === "unavailable") {
+          setIsAdBlockDetected(true);
+        }
+      }
+    );
+    return () => unsub();
+  }, []);
 
   const handleAdminBadgeClick = () => {
     if (isAdminMode) {
-      if (hasUnsavedChanges || saveStatus === "saving") {
+      if (hasUnsavedChanges) {
         setExitConfirmOpen(true);
-        return;
+      } else {
+        onAdminLogout();
       }
-      onAdminLogout();
-      return;
+    } else {
+      setAdminDialogOpen(true);
     }
-    setAdminPassword("");
-    setAdminError(null);
-    setAdminDialogOpen(true);
   };
 
   const handleAdminLogin = () => {
     const expectedKey = process.env.NEXT_PUBLIC_ADMIN_KEY || "change-me";
-    
     if (adminPassword !== expectedKey) {
       setAdminError("Wrong admin password.");
       return;
     }
-    
-    setAdminDialogOpen(false);
+    onAdminLogin(expectedKey);
     setAdminPassword("");
     setAdminError(null);
-    onAdminLogin(expectedKey);
+    setAdminDialogOpen(false);
+  };
+
+  const handleExitConfirm = async () => {
+    setExitBusy(true);
+    try {
+      const success = await onSaveNow();
+      if (success) {
+        onAdminLogout();
+        setExitConfirmOpen(false);
+      }
+    } finally {
+      setExitBusy(false);
+    }
   };
 
   return (
-    <div className="w-80 flex flex-col gap-4 h-full overflow-y-auto">
-      {/* Search */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Search className="h-4 w-4" />
-            Search Room
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="relative">
-            <Input
-              placeholder="Search rooms..."
-              value={searchQuery}
-              onChange={(e) => {
-                onSearchChange(e.target.value);
-                setShowSearchResults(e.target.value.length > 0);
-              }}
-              onFocus={() => setShowSearchResults(searchQuery.length > 0)}
-              onBlur={() => setTimeout(() => setShowSearchResults(false), 200)}
-            />
-            {showSearchResults && filteredRooms.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-md shadow-lg z-50 max-h-48 overflow-y-auto">
-                {filteredRooms.slice(0, 8).map((room) => (
-                  <button
-                    key={room.id}
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-accent flex items-center justify-between"
-                    onClick={() => {
-                      onRoomSelect(room);
-                      setShowSearchResults(false);
-                      onSearchChange("");
-                    }}
-                  >
-                    <span>{room.name}</span>
-                    <Badge variant="secondary" className="text-xs">
-                      {floors.find((f) => f.id === room.floor)?.name || room.floor}
-                    </Badge>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Floor Selection */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium">Select Floor</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {floors
-              .slice()
-              .sort((a, b) => b.level - a.level)
-              .map((floor) => (
-                <Button
-                  key={floor.id}
-                  variant={selectedFloor === floor.id ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => onFloorChange(floor.id)}
-                  className="text-xs"
-                >
-                  {floor.name}
-                </Button>
-              ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Admin Controls */}
-      <Card>
-        <CardHeader className="pb-3">
+    <div className="w-80 flex flex-col h-full bg-background border-r border-border p-4 gap-4 overflow-hidden">
+      <Card className="flex-shrink-0">
+        <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium flex items-center justify-between">
             Admin Controls
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                <Database className="h-3 w-3 text-green-500" />
-                Firebase
+                {isFirebaseConnected === null ? (
+                  <Database className="h-3 w-3 text-gray-400 animate-pulse" />
+                ) : isFirebaseConnected ? (
+                  <Wifi className="h-3 w-3 text-green-500" />
+                ) : (
+                  <WifiOff className="h-3 w-3 text-red-500" />
+                )}
+                <span>Firebase</span>
               </div>
-              <Badge
-                variant={isAdminMode ? "default" : "secondary"}
-                className="cursor-pointer"
+              <Badge 
+                variant={isAdminMode ? "default" : "outline"} 
+                className="cursor-pointer hover:bg-accent hover:text-accent-foreground"
                 onClick={handleAdminBadgeClick}
               >
-                {isAdminMode ? "Admin: ON" : "Admin: OFF (click)"}
+                {isAdminMode ? "Admin On" : "Admin Off"}
               </Badge>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 rounded-full"
+                onClick={() => setShowDiag(!showDiag)}
+              >
+                <Info className="h-3 w-3" />
+              </Button>
             </div>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onAddRoom}
-              disabled={!isAdminMode}
-              className="text-xs"
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Add Room
-            </Button>
-            <Button
-              variant={isPickingCoordinates ? "default" : "outline"}
-              size="sm"
-              onClick={onPickCoordinates}
-              disabled={!isAdminMode}
-              className="text-xs"
-            >
-              <MousePointer className="h-3 w-3 mr-1" />
-              Pick Coords
-            </Button>
-          </div>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={async () => {
-              if (!isAdminMode) return;
-              setExitBusy(true);
-              try {
-                await onSaveNow();
-              } finally {
-                setExitBusy(false);
-              }
-            }}
-            disabled={!isAdminMode || saveStatus === "saving" || exitBusy || !hasUnsavedChanges}
-            className="w-full text-xs"
-          >
-            {saveStatus === "saving" || exitBusy ? "Saving…" : "Save Changes"}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onResetData}
-            className="w-full text-xs"
-          >
-            <RotateCcw className="h-3 w-3 mr-1" />
-            Reset to Default
-          </Button>
-          {isAdminMode && (
-            <div className="space-y-1">
-              {hasUnsavedChanges && saveStatus !== "saving" && (
-                <p className="text-xs text-muted-foreground">
-                  You have unsaved changes.
-                </p>
+        <CardContent className="space-y-4">
+          {showDiag && (
+            <div className="p-2 bg-muted rounded-md text-[10px] space-y-1 font-mono">
+              <div className="flex justify-between border-b border-border pb-1 mb-1 font-bold">
+                <span>Firebase Diagnostics</span>
+                <span className={isFirebaseConnected ? "text-green-500" : "text-red-500"}>
+                  {isFirebaseConnected ? "CONNECTED" : "DISCONNECTED"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Project:</span>
+                <span className="text-blue-500 truncate ml-2 max-w-[120px]">{firebaseDiag.projectId}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>API Key:</span>
+                <span className={firebaseDiag.apiKey === "MISSING" ? "text-red-500" : "text-green-500"}>
+                  {firebaseDiag.apiKey}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>App ID:</span>
+                <span className={firebaseDiag.appId === "MISSING" ? "text-red-500" : "text-green-500"}>
+                  {firebaseDiag.appId}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>DB URL:</span>
+                <span className={firebaseDiag.databaseURL === "NOT SET" ? "text-yellow-500" : "text-green-500"}>
+                  {firebaseDiag.databaseURL}
+                </span>
+              </div>
+              {isAdBlockDetected && (
+                <div className="mt-2 p-1 bg-red-500/20 text-red-400 font-bold border border-red-500/50 rounded animate-pulse">
+                  ⚠️ AD-BLOCKER DETECTED!
+                  <div className="font-normal mt-1">
+                    Disable AdBlock/uBlock for localhost to allow sync.
+                  </div>
+                </div>
               )}
-              {saveError && (
-                <p className="text-xs text-destructive truncate">{saveError}</p>
+              {!isFirebaseConnected && !isAdBlockDetected && (
+                <div className="mt-2 space-y-2">
+                  <div className="text-red-400 italic">
+                    * Restart terminal after editing .env.local
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full text-[10px] h-7 flex items-center gap-2"
+                    onClick={handleReconnect}
+                    disabled={isReconnecting}
+                  >
+                    <RefreshCw className={`h-3 w-3 ${isReconnecting ? "animate-spin" : ""}`} />
+                    Try Reconnect
+                  </Button>
+                </div>
               )}
             </div>
           )}
-          {isAdminMode && (
-            <p className="text-xs text-muted-foreground">
-              Click any room on the map to edit or delete it.
-            </p>
+          {isAdminMode ? (
+            <div className="space-y-2">
+              <Button className="w-full justify-start" variant="outline" size="sm" onClick={onAddRoom}>
+                <Plus className="mr-2 h-4 w-4" /> Add Room
+              </Button>
+              <Button 
+                className={`w-full justify-start ${isPickingCoordinates ? "bg-primary text-primary-foreground" : ""}`} 
+                variant="outline" 
+                size="sm" 
+                onClick={onPickCoordinates}
+              >
+                <MousePointer className="mr-2 h-4 w-4" /> 
+                {isPickingCoordinates ? "Click Map Now" : "Pick Coordinates"}
+              </Button>
+              <Button className="w-full justify-start" variant="outline" size="sm" onClick={onResetData}>
+                <RotateCcw className="mr-2 h-4 w-4" /> Reset Data
+              </Button>
+              <Separator className="my-2" />
+              <Button 
+                className="w-full" 
+                variant={hasUnsavedChanges ? "default" : "secondary"} 
+                size="sm" 
+                onClick={onSaveNow}
+                disabled={saveStatus === "saving" || !hasUnsavedChanges}
+              >
+                {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved!" : "Save Now"}
+              </Button>
+              {saveError && <p className="text-[10px] text-destructive mt-1">{saveError}</p>}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground italic">Login as admin to edit the map.</p>
           )}
         </CardContent>
       </Card>
 
-      {/* Directions */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Navigation className="h-4 w-4" />
-            Directions
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground">From</label>
-            <Select
-              value={fromRoom?.id || ""}
-              onValueChange={(val) => {
-                const room = allRooms.find((r) => r.id === val);
-                onFromChange(room || null);
-              }}
-            >
-              <SelectTrigger className="text-sm">
-                <SelectValue placeholder="Select starting point">
-                  {fromRoom ? (
-                    <span className="flex items-center gap-2">
-                      <MapPin className="h-3 w-3 text-accent" />
-                      {floors.find((f) => f.id === fromRoom.floor)?.name}: {fromRoom.name}
-                    </span>
-                  ) : (
-                    "Select starting point"
-                  )}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {floors.map((floor) => (
-                  <div key={floor.id}>
-                    <div className="px-2 py-1 text-xs font-semibold text-muted-foreground bg-muted">
-                      {floor.name}
-                    </div>
-                    {floor.rooms
-                      .filter((r) => r.type !== "corridor")
-                      .map((room) => (
-                        <SelectItem key={room.id} value={room.id}>
-                          {room.name}
-                        </SelectItem>
-                      ))}
-                  </div>
+      <div className="relative">
+        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+          <Search className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <Input
+          placeholder="Search rooms..."
+          className="pl-9"
+          value={searchQuery}
+          onChange={(e) => {
+            onSearchChange(e.target.value);
+            setShowSearchResults(true);
+          }}
+          onFocus={() => setShowSearchResults(true)}
+        />
+        {showSearchResults && filteredRooms.length > 0 && (
+          <Card className="absolute top-full left-0 right-0 z-50 mt-1 shadow-lg max-h-60 overflow-hidden">
+            <ScrollArea className="h-full">
+              <div className="p-2 space-y-1">
+                {filteredRooms.map((room) => (
+                  <Button
+                    key={room.id}
+                    variant="ghost"
+                    className="w-full justify-start text-sm h-8"
+                    onClick={() => {
+                      onRoomSelect(room);
+                      setShowSearchResults(false);
+                    }}
+                  >
+                    <MapPin className="mr-2 h-3 w-3" />
+                    {room.name}
+                  </Button>
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
+              </div>
+            </ScrollArea>
+          </Card>
+        )}
+      </div>
 
-          <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground">To</label>
-            <Select
-              value={toRoom?.id || ""}
-              onValueChange={(val) => {
-                const room = allRooms.find((r) => r.id === val);
-                onToChange(room || null);
-              }}
-            >
-              <SelectTrigger className="text-sm">
-                <SelectValue placeholder="Select destination">
-                  {toRoom ? (
-                    <span className="flex items-center gap-2">
-                      <MapPin className="h-3 w-3 text-primary" />
-                      {floors.find((f) => f.id === toRoom.floor)?.name}: {toRoom.name}
-                    </span>
-                  ) : (
-                    "Select destination"
-                  )}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {floors.map((floor) => (
-                  <div key={floor.id}>
-                    <div className="px-2 py-1 text-xs font-semibold text-muted-foreground bg-muted">
-                      {floor.name}
-                    </div>
-                    {floor.rooms
-                      .filter((r) => r.type !== "corridor")
-                      .map((room) => (
-                        <SelectItem key={room.id} value={room.id}>
-                          {room.name}
-                        </SelectItem>
-                      ))}
-                  </div>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <div className="space-y-4 overflow-hidden flex flex-col min-h-0">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Floor</label>
+          <Select value={selectedFloor} onValueChange={onFloorChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select floor" />
+            </SelectTrigger>
+            <SelectContent>
+              {floors.map((floor) => (
+                <SelectItem key={floor.id} value={floor.id}>
+                  {floor.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-          <div className="flex gap-2">
-            <Button
-              onClick={onShowPath}
-              disabled={!fromRoom || !toRoom}
-              className="flex-1"
-              size="sm"
-            >
-              Show Path
-            </Button>
-            <Button variant="outline" onClick={onClearPath} size="sm">
-              Clear
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">From</label>
+          <Select 
+            value={fromRoom?.id || ""} 
+            onValueChange={(val) => onFromChange(allRooms.find(r => r.id === val) || null)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select starting point" />
+            </SelectTrigger>
+            <SelectContent>
+              {allRooms.map((room) => (
+                <SelectItem key={room.id} value={room.id}>
+                  {room.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      {/* Navigation Steps */}
-      {navigationSteps.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Navigation Steps</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-48">
-              <div className="space-y-2">
-                {navigationSteps.map((step, index) => (
-                  <div key={index} className="flex items-start gap-3">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-medium">
-                      {index + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm">{step.instruction}</p>
-                      {step.distance > 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          ~{step.distance} steps
-                        </p>
-                      )}
-                    </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">To</label>
+          <Select 
+            value={toRoom?.id || ""} 
+            onValueChange={(val) => onToChange(allRooms.find(r => r.id === val) || null)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select destination" />
+            </SelectTrigger>
+            <SelectContent>
+              {allRooms.map((room) => (
+                <SelectItem key={room.id} value={room.id}>
+                  {room.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Button className="w-full" onClick={onShowPath} disabled={!fromRoom || !toRoom}>
+          <Navigation className="mr-2 h-4 w-4" /> Show Path
+        </Button>
+
+        {navigationSteps.length > 0 && (
+          <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium">Directions</label>
+              <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={onClearPath}>
+                Clear
+              </Button>
+            </div>
+            <ScrollArea className="flex-1 border rounded-md p-3 bg-muted/50">
+              <div className="space-y-3">
+                {navigationSteps.map((step, idx) => (
+                  <div key={idx} className="text-sm flex gap-3">
+                    <span className="text-muted-foreground font-mono">{idx + 1}.</span>
+                    <span>{step.instruction}</span>
                   </div>
                 ))}
               </div>
             </ScrollArea>
-            <Separator className="my-3" />
-            <div className="text-sm font-medium text-center">
-              Total: ~{navigationSteps.reduce((sum, s) => sum + s.distance, 0)} steps
-            </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        )}
+      </div>
 
       <Dialog open={adminDialogOpen} onOpenChange={setAdminDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Admin Login</DialogTitle>
             <DialogDescription>
-              Enter the admin password to enable building editing controls.
+              Enter the admin password to enable editing mode.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <Input
-              type="password"
-              placeholder="Admin password..."
-              value={adminPassword}
-              onChange={(e) => setAdminPassword(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()}
-            />
-            {adminError && (
-              <p className="text-xs text-destructive mt-2 font-medium">{adminError}</p>
-            )}
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <label htmlFor="password">Password</label>
+              <Input
+                id="password"
+                type="password"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()}
+              />
+              {adminError && <p className="text-sm text-destructive">{adminError}</p>}
+            </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAdminDialogOpen(false)}>
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setAdminDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleAdminLogin}>Login</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={exitConfirmOpen} onOpenChange={setExitConfirmOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Exit Admin Mode?</DialogTitle>
+            <DialogTitle>Unsaved Changes</DialogTitle>
             <DialogDescription>
-              You have unsaved changes. Save them before exiting?
+              You have unsaved changes. Would you like to save them before logging out?
             </DialogDescription>
           </DialogHeader>
-
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setExitConfirmOpen(false)}
-              disabled={exitBusy || saveStatus === "saving"}
-            >
-              Cancel
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => { onAdminLogout(); setExitConfirmOpen(false); }} disabled={exitBusy}>
+              Discard Changes
             </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setExitConfirmOpen(false);
-                onAdminLogout();
-              }}
-              disabled={exitBusy || saveStatus === "saving"}
-            >
-              Exit without saving
-            </Button>
-            <Button
-              onClick={async () => {
-                setExitBusy(true);
-                try {
-                  const ok = await onSaveNow();
-                  if (ok) {
-                    setExitConfirmOpen(false);
-                    onAdminLogout();
-                  }
-                } finally {
-                  setExitBusy(false);
-                }
-              }}
-              disabled={exitBusy || saveStatus === "saving"}
-            >
-              Save & exit
+            <Button onClick={handleExitConfirm} disabled={exitBusy}>
+              {exitBusy ? "Saving..." : "Save and Logout"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -14,4 +14,3 @@ export async function GET() {
     return NextResponse.json({ error: "Failed to load data" }, { status: 500 });
   }
 }
-

@@ -45,8 +45,7 @@
             "help_desk",
             "colonel",
             "lift_left_g",
-            "stairs_left_g",
-            "room_011"
+            "stairs_left_g"
           ]
         },
         {
@@ -134,10 +133,10 @@
           "id": "colonel",
           "name": "Colonel's Office",
           "floor": "ground",
-          "x": 53,
-          "y": 219,
-          "width": 120,
-          "height": 80,
+          "x": 47,
+          "y": 210,
+          "width": 173,
+          "height": 95,
           "type": "office",
           "connections": [
             "center_gate_left"
@@ -147,29 +146,23 @@
           "id": "room_011",
           "name": "011 Room",
           "floor": "ground",
-          "x": 410,
-          "y": 80,
+          "x": 243,
+          "y": 83,
           "width": 100,
           "height": 80,
           "type": "office",
-          "connections": [
-            "center_gate_left",
-            "executive_hall"
-          ]
+          "connections": []
         },
         {
           "id": "executive_hall",
           "name": "012 Executive Hall",
           "floor": "ground",
-          "x": 530,
+          "x": 354,
           "y": 80,
-          "width": 160,
-          "height": 80,
+          "width": 349,
+          "height": 77,
           "type": "office",
-          "connections": [
-            "room_011",
-            "washroom_male"
-          ]
+          "connections": []
         },
         {
           "id": "washroom_male",
@@ -180,10 +173,7 @@
           "width": 120,
           "height": 80,
           "type": "washroom",
-          "connections": [
-            "executive_hall",
-            "audi_sv"
-          ]
+          "connections": []
         },
         {
           "id": "audi_sv",
@@ -194,19 +184,6 @@
           "width": 100,
           "height": 200,
           "type": "audi",
-          "connections": [
-            "washroom_male"
-          ]
-        },
-        {
-          "id": "room-1777575982472",
-          "name": "CB69",
-          "floor": "ground",
-          "x": 877,
-          "y": 348,
-          "width": 100,
-          "height": 70,
-          "type": "room",
           "connections": []
         }
       ]
@@ -311,7 +288,7 @@
           "y": 50,
           "width": 150,
           "height": 150,
-          "type": "office",
+          "type": "lab",
           "connections": [
             "lift_left_2"
           ]
@@ -357,7 +334,7 @@
           "y": 50,
           "width": 150,
           "height": 150,
-          "type": "office",
+          "type": "classroom",
           "connections": [
             "lift_left_3"
           ]
@@ -457,5 +434,5 @@
       ]
     }
   ],
-  "updatedAt": "2026-04-30T19:06:36.262Z"
+  "updatedAt": "2026-04-30T14:50:27.263Z"
 }

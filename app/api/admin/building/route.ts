@@ -39,4 +39,3 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Server error during save" }, { status: 500 });
   }
 }
-

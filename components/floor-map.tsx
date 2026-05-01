@@ -106,102 +106,38 @@ export function FloorMap({
   const generatePathLine = () => {
     if (!pathResult || pathResult.path.length < 2) return null;
 
-    const currentFloorId = rooms[0]?.floor;
-    const isGround = currentFloorId === "ground";
-    const CORRIDOR_Y = 180;
+    const currentFloorPath = pathResult.path.filter(
+      (room) => room.floor === rooms[0]?.floor
+    );
+    if (currentFloorPath.length < 2) return null;
 
-    let pathD = "";
-    const points: { x: number; y: number }[] = [];
+    const points = currentFloorPath.map((room) => ({
+      x: room.x + room.width / 2,
+      y: room.y + room.height / 2,
+    }));
 
-    // Filter path to only include rooms on this floor
-    const floorPath = pathResult.path.filter(r => r.floor === currentFloorId);
-    if (floorPath.length < 2) return null;
-
-    for (let i = 0; i < floorPath.length - 1; i++) {
-      const room1 = floorPath[i];
-      const room2 = floorPath[i + 1];
-
-      const x1 = room1.x + room1.width / 2;
-      const y1 = room1.y + room1.height / 2;
-      const x2 = room2.x + room2.width / 2;
-      const y2 = room2.y + room2.height / 2;
-
-      if (pathD === "") {
-        pathD = `M ${x1} ${y1}`;
-        points.push({ x: x1, y: y1 });
-      }
-
-      if (isGround) {
-        // Only deviate from the corridor line for the start and end rooms
-        const isStart = i === 0;
-        const isEnd = i === floorPath.length - 2;
-
-        if (isStart && isEnd) {
-          // Path between just two rooms on ground floor
-          pathD += ` L ${x1} ${CORRIDOR_Y} L ${x2} ${CORRIDOR_Y} L ${x2} ${y2}`;
-        } else if (isStart) {
-          // Starting segment
-          pathD += ` L ${x1} ${CORRIDOR_Y}`;
-        } else if (isEnd) {
-          // Ending segment
-          pathD += ` L ${x2} ${CORRIDOR_Y} L ${x2} ${y2}`;
-        } else {
-          // Intermediate segments stay on the corridor line
-          pathD += ` L ${x2} ${CORRIDOR_Y}`;
-        }
-      } else {
-        // Standard direct connection for other floors
-        pathD += ` L ${x2} ${y2}`;
-      }
-    }
-
-    // Add final destination point
-    const lastRoom = floorPath[floorPath.length - 1];
-    points.push({ 
-      x: lastRoom.x + lastRoom.width / 2, 
-      y: lastRoom.y + lastRoom.height / 2 
-    });
-
-    if (pathD === "") return null;
+    const pathD = points
+      .map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`))
+      .join(" ");
 
     return (
       <g>
-        <defs>
-          <path
-            id="nav-arrow-shape"
-            d="M -8,-6 L 8,0 L -8,6 Z"
-            className="nav-arrow"
-          />
-        </defs>
-
         <path
           d={pathD}
           fill="none"
-          className="nav-path"
+          className="stroke-primary"
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeDasharray="8,4"
         />
-
-        {[0, 1, 2].map((i) => (
-          <use key={`arrow-${i}`} href="#nav-arrow-shape">
-            <animateMotion
-              dur="3s"
-              repeatCount="indefinite"
-              path={pathD}
-              rotate="auto"
-              begin={`${i * 1}s`}
-            />
-          </use>
-        ))}
-
         {points.map((p, i) => (
           <circle
-            key={`pt-${i}`}
+            key={i}
             cx={p.x}
             cy={p.y}
             r="6"
-            className={cn(
-              "stroke-white",
-              i === 0 ? "fill-green-500" : "fill-sky-600"
-            )}
+            className="fill-primary stroke-primary-foreground"
             strokeWidth="2"
           />
         ))}
@@ -321,6 +257,45 @@ export function FloorMap({
 
         {/* Navigation path */}
         {generatePathLine()}
+
+        {/* Step indicators along the path */}
+        {pathResult &&
+          pathResult.steps
+            .filter((step) => step.floor === rooms[0]?.floor && step.distance > 0)
+            .map((step, i) => {
+              const pathRooms = pathResult.path.filter(
+                (r) => r.floor === rooms[0]?.floor
+              );
+              if (i >= pathRooms.length - 1) return null;
+              const room1 = pathRooms[i];
+              const room2 = pathRooms[i + 1];
+              if (!room1 || !room2) return null;
+              const midX =
+                (room1.x + room1.width / 2 + room2.x + room2.width / 2) / 2;
+              const midY =
+                (room1.y + room1.height / 2 + room2.y + room2.height / 2) / 2;
+              return (
+                <g key={`step-${i}`}>
+                  <rect
+                    x={midX - 25}
+                    y={midY - 10}
+                    width="50"
+                    height="20"
+                    rx="10"
+                    className="fill-primary"
+                  />
+                  <text
+                    x={midX}
+                    y={midY + 1}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    className="fill-primary-foreground text-[9px] font-medium"
+                  >
+                    {step.distance} steps
+                  </text>
+                </g>
+              );
+            })}
       </svg>
     </div>
   );

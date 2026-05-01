@@ -6,8 +6,6 @@ import { FloorMap } from "@/components/floor-map";
 import { NavigationSidebar } from "@/components/navigation-sidebar";
 import { RoomDialog } from "@/components/room-dialog";
 import { CoordinatePicker } from "@/components/coordinate-picker";
-import { db } from "@/lib/firebase";
-import { doc, setDoc } from "firebase/firestore";
 import {
   Room,
   Floor,
@@ -84,25 +82,9 @@ export default function IndoorNavPage() {
   const performSave = useCallback(
     async (nextFloors: Floor[]) => {
       if (!adminKey) return false;
-      
-      // Use a timeout to prevent infinite "Saving..." state
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
-
       try {
         setSaveStatus("saving");
         setSaveError(null);
-
-        // 1. Non-blocking Firestore Sync (Real-time cloud backup)
-        // We don't await this to prevent it from hanging the main save process
-        setDoc(doc(db, "building", "cb_building"), {
-          floors: nextFloors,
-          updatedAt: new Date().toISOString(),
-        })
-          .then(() => console.log("✅ Successfully synced to Firebase Firestore"))
-          .catch((err) => console.error("❌ Firebase sync failed (background):", err));
-
-        // 2. Original API Save (Local JSON/MongoDB)
         const res = await fetch("/api/admin/building", {
           method: "PUT",
           headers: {
@@ -110,18 +92,11 @@ export default function IndoorNavPage() {
             "x-admin-key": adminKey,
           },
           body: JSON.stringify({ floors: nextFloors }),
-          signal: controller.signal,
         });
-
-        clearTimeout(timeoutId);
-
         if (!res.ok) {
           const data = await res.json().catch(() => null);
           setSaveStatus("idle");
-          const errorMessage = res.status === 404 
-            ? "Save failed (API route not found)."
-            : (data?.error || `Save failed (HTTP ${res.status})`);
-          setSaveError(errorMessage);
+          setSaveError(data?.error || `Save failed (HTTP ${res.status})`);
           return false;
         }
 
@@ -130,14 +105,9 @@ export default function IndoorNavPage() {
         setSaveStatus("saved");
         window.setTimeout(() => setSaveStatus("idle"), 1200);
         return true;
-      } catch (err: any) {
-        clearTimeout(timeoutId);
+      } catch {
         setSaveStatus("idle");
-        if (err.name === 'AbortError') {
-          setSaveError("Save timed out. Check your internet connection.");
-        } else {
-          setSaveError("Save failed (network error).");
-        }
+        setSaveError("Save failed (network). Is the server running?");
         return false;
       }
     },
@@ -195,13 +165,16 @@ export default function IndoorNavPage() {
       if (result) {
         setPathResult(result);
         setNavigationSteps(result.steps);
-        setSaveError(null); // Clear any previous errors
       } else {
         setPathResult(null);
-        setNavigationSteps([]);
-        setSaveError(`No path found between ${fromRoom.name} and ${room.name}. They might not be connected in the database.`);
-        // Reset selection after a short delay so user can try again
-        setTimeout(() => setSaveError(null), 5000);
+        setNavigationSteps([
+          {
+            instruction:
+              "No path found. Admin needs to connect rooms (connections).",
+            distance: 0,
+            floor: room.floor,
+          },
+        ]);
       }
     },
     [isAdminMode, fromRoom, floors]
@@ -255,16 +228,10 @@ export default function IndoorNavPage() {
     if (result) {
       setPathResult(result);
       setNavigationSteps(result.steps);
-      setSaveError(null);
       // Switch to the starting floor
       if (fromRoom.floor !== selectedFloor) {
         setSelectedFloor(fromRoom.floor);
       }
-    } else {
-      setPathResult(null);
-      setNavigationSteps([]);
-      setSaveError(`Path could not be calculated. Please check room connections.`);
-      setTimeout(() => setSaveError(null), 4000);
     }
   }, [fromRoom, toRoom, floors, selectedFloor]);
 
