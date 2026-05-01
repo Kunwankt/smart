@@ -255,6 +255,17 @@ export function FloorMap({
           </g>
         ))}
 
+        {/* Horizontal boundary line */}
+        <line
+          x1="0"
+          y1="320"
+          x2="1000"
+          y2="320"
+          className="stroke-gray-300"
+          strokeWidth="2"
+          strokeDasharray="10,5"
+        />
+
         {/* Navigation path */}
         {generatePathLine()}
 
