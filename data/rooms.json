@@ -22,8 +22,8 @@
           "id": "help_desk",
           "name": "Help Desk",
           "floor": "ground",
-          "x": 400,
-          "y": 600,
+          "x": 669,
+          "y": 626,
           "width": 140,
           "height": 50,
           "type": "desk",
@@ -136,7 +136,7 @@
           "id": "executive_hall",
           "name": "012 Executive Hall",
           "floor": "ground",
-          "x": 354,
+          "x": 351,
           "y": 80,
           "width": 349,
           "height": 77,
@@ -201,5 +201,5 @@
       ]
     }
   ],
-  "updatedAt": "2026-05-01T17:13:08.637Z"
+  "updatedAt": "2026-05-01T17:20:50.837Z"
 }

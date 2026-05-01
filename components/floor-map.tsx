@@ -106,38 +106,88 @@ export function FloorMap({
   const generatePathLine = () => {
     if (!pathResult || pathResult.path.length < 2) return null;
 
-    const currentFloorPath = pathResult.path.filter(
-      (room) => room.floor === rooms[0]?.floor
-    );
-    if (currentFloorPath.length < 2) return null;
+    const currentFloorId = rooms[0]?.floor;
+    const isGround = currentFloorId === "ground";
+    const CORRIDOR_Y = 180;
 
-    const points = currentFloorPath.map((room) => ({
-      x: room.x + room.width / 2,
-      y: room.y + room.height / 2,
-    }));
+    let pathD = "";
+    const points: { x: number; y: number }[] = [];
 
-    const pathD = points
-      .map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`))
-      .join(" ");
+    // Filter path to only include rooms on this floor
+    const floorPath = pathResult.path.filter((r) => r.floor === currentFloorId);
+    if (floorPath.length < 2) return null;
+
+    for (let i = 0; i < floorPath.length - 1; i++) {
+      const room1 = floorPath[i];
+      const room2 = floorPath[i + 1];
+
+      const x1 = room1.x + room1.width / 2;
+      const y1 = room1.y + room1.height / 2;
+      const x2 = room2.x + room2.width / 2;
+      const y2 = room2.y + room2.height / 2;
+
+      if (pathD === "") {
+        pathD = `M ${x1} ${y1}`;
+        points.push({ x: x1, y: y1 });
+      }
+
+      if (isGround) {
+        // STRICT CORRIDOR ROUTING: Vertical -> Horizontal -> Vertical
+        // This forces the path to always go to the corridor line first
+        pathD += ` L ${x1} ${CORRIDOR_Y} L ${x2} ${CORRIDOR_Y} L ${x2} ${y2}`;
+      } else {
+        // Standard direct connection for other floors
+        pathD += ` L ${x2} ${y2}`;
+      }
+    }
+
+    // Add final destination point
+    const lastRoom = floorPath[floorPath.length - 1];
+    points.push({
+      x: lastRoom.x + lastRoom.width / 2,
+      y: lastRoom.y + lastRoom.height / 2,
+    });
+
+    if (pathD === "") return null;
 
     return (
       <g>
-        <path
-          d={pathD}
-          fill="none"
-          className="stroke-primary"
-          strokeWidth="4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeDasharray="8,4"
-        />
+        {/* Define the arrow shape once */}
+        <defs>
+          <path
+            id="nav-arrow-shape"
+            d="M -8,-6 L 8,0 L -8,6 Z"
+            className="nav-arrow"
+          />
+        </defs>
+
+        {/* The background dashed path */}
+        <path d={pathD} fill="none" className="nav-path" />
+
+        {/* Multiple moving arrows for flow */}
+        {[0, 1, 2].map((i) => (
+          <use key={`arrow-${i}`} href="#nav-arrow-shape">
+            <animateMotion
+              dur="4s"
+              repeatCount="indefinite"
+              path={pathD}
+              rotate="auto"
+              begin={`${i * 1.33}s`}
+            />
+          </use>
+        ))}
+
+        {/* Start/End markers */}
         {points.map((p, i) => (
           <circle
-            key={i}
+            key={`pt-${i}`}
             cx={p.x}
             cy={p.y}
             r="6"
-            className="fill-primary stroke-primary-foreground"
+            className={cn(
+              "stroke-white",
+              i === 0 ? "fill-green-500" : "fill-sky-600"
+            )}
             strokeWidth="2"
           />
         ))}
