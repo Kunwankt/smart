@@ -84,7 +84,8 @@
           "height": 80,
           "type": "office",
           "connections": [
-            "center_gate_left"
+            "center_gate_left",
+            "washroom_female"
           ]
         },
         {
@@ -110,29 +111,28 @@
           "height": 80,
           "type": "washroom",
           "connections": [
-            "center_gate_left",
-            "washroom_female"
+            "center_gate_left"
           ]
         },
         {
           "id": "washroom_female",
           "name": "Washroom (Female)",
           "floor": "ground",
-          "x": 840,
+          "x": 100,
           "y": 80,
           "width": 120,
           "height": 80,
           "type": "washroom",
           "connections": [
-            "washroom_male",
-            "exit_right"
+            "room_011",
+            "exit_left"
           ]
         },
         {
-          "id": "exit_right",
-          "name": "Right Exit",
+          "id": "exit_left",
+          "name": "Left Exit",
           "floor": "ground",
-          "x": 970,
+          "x": 10,
           "y": 80,
           "width": 80,
           "height": 80,
