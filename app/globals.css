@@ -208,5 +208,28 @@
   font-weight: 600;
   fill: #1e293b;
   pointer-events: none;
-  text-anchor: middle;
+}
+
+/* Animated navigation path */
+.nav-path {
+  stroke: #0ea5e9; /* Sky blue */
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 12, 12;
+  animation: movePath 0.8s linear infinite;
+}
+
+.nav-arrow {
+  fill: #0ea5e9;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+}
+
+@keyframes movePath {
+  from {
+    stroke-dashoffset: 24;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }

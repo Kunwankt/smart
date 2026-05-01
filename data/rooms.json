@@ -14,45 +14,18 @@
           "width": 120,
           "height": 60,
           "type": "gate",
-          "connections": [
-            "help_desk"
-          ]
+          "connections": ["center_gate_left"]
         },
         {
           "id": "help_desk",
           "name": "Help Desk",
           "floor": "ground",
-          "x": 669,
-          "y": 626,
+          "x": 400,
+          "y": 600,
           "width": 140,
           "height": 50,
           "type": "desk",
-          "connections": [
-            "main_gate",
-            "center_gate_left"
-          ]
-        },
-        {
-          "id": "stairs_left_g",
-          "name": "Stairs (Left)",
-          "floor": "ground",
-          "x": 250,
-          "y": 350,
-          "width": 60,
-          "height": 60,
-          "type": "stairs",
-          "connections": []
-        },
-        {
-          "id": "lift_left_g",
-          "name": "Lift (Left)",
-          "floor": "ground",
-          "x": 320,
-          "y": 350,
-          "width": 60,
-          "height": 60,
-          "type": "lift",
-          "connections": []
+          "connections": ["main_gate", "center_gate_left"]
         },
         {
           "id": "center_gate_left",
@@ -63,12 +36,7 @@
           "width": 100,
           "height": 60,
           "type": "gate",
-          "connections": [
-            "help_desk",
-            "room_011",
-            "executive_hall",
-            "washroom_male"
-          ]
+          "connections": ["main_gate", "washroom_male", "room_011", "executive_hall", "colonel"]
         },
         {
           "id": "center_gate_right",
@@ -79,31 +47,7 @@
           "width": 100,
           "height": 60,
           "type": "gate",
-          "connections": [
-            "center_gate_left"
-          ]
-        },
-        {
-          "id": "lift_right_g",
-          "name": "Lift (Right)",
-          "floor": "ground",
-          "x": 620,
-          "y": 350,
-          "width": 60,
-          "height": 60,
-          "type": "lift",
-          "connections": []
-        },
-        {
-          "id": "stairs_right_g",
-          "name": "Stairs (Right)",
-          "floor": "ground",
-          "x": 690,
-          "y": 350,
-          "width": 60,
-          "height": 60,
-          "type": "stairs",
-          "connections": []
+          "connections": ["center_gate_left"]
         },
         {
           "id": "colonel",
@@ -114,9 +58,7 @@
           "width": 173,
           "height": 95,
           "type": "office",
-          "connections": [
-            "center_gate_left"
-          ]
+          "connections": ["center_gate_left"]
         },
         {
           "id": "room_011",
@@ -127,23 +69,18 @@
           "width": 100,
           "height": 80,
           "type": "office",
-          "connections": [
-            "center_gate_left",
-            "washroom_female"
-          ]
+          "connections": ["center_gate_left"]
         },
         {
           "id": "executive_hall",
           "name": "012 Executive Hall",
           "floor": "ground",
-          "x": 351,
+          "x": 354,
           "y": 80,
           "width": 349,
           "height": 77,
           "type": "office",
-          "connections": [
-            "center_gate_left"
-          ]
+          "connections": ["center_gate_left"]
         },
         {
           "id": "washroom_male",
@@ -154,36 +91,7 @@
           "width": 120,
           "height": 80,
           "type": "washroom",
-          "connections": [
-            "center_gate_left"
-          ]
-        },
-        {
-          "id": "washroom_female",
-          "name": "Washroom (Female)",
-          "floor": "ground",
-          "x": 100,
-          "y": 80,
-          "width": 120,
-          "height": 80,
-          "type": "washroom",
-          "connections": [
-            "room_011",
-            "exit_left"
-          ]
-        },
-        {
-          "id": "exit_left",
-          "name": "Left Exit",
-          "floor": "ground",
-          "x": 10,
-          "y": 80,
-          "width": 80,
-          "height": 80,
-          "type": "gate",
-          "connections": [
-            "washroom_female"
-          ]
+          "connections": ["center_gate_left", "audi_sv"]
         },
         {
           "id": "audi_sv",
@@ -194,12 +102,10 @@
           "width": 100,
           "height": 200,
           "type": "audi",
-          "connections": [
-            "washroom_male"
-          ]
+          "connections": ["washroom_male"]
         }
       ]
     }
   ],
-  "updatedAt": "2026-05-01T17:20:50.837Z"
+  "updatedAt": "2026-05-01T17:40:00.000Z"
 }
