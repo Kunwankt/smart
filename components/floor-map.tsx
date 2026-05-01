@@ -133,7 +133,9 @@ export function FloorMap({
 
       if (isGround) {
         // STRICT CORRIDOR ROUTING: Vertical -> Horizontal -> Vertical
-        // This forces the path to always go to the corridor line first
+        // 1. Move vertically from room1 center to corridor line
+        // 2. Move horizontally along corridor line to room2's x position
+        // 3. Move vertically from corridor line to room2 center
         pathD += ` L ${x1} ${CORRIDOR_Y} L ${x2} ${CORRIDOR_Y} L ${x2} ${y2}`;
       } else {
         // Standard direct connection for other floors
