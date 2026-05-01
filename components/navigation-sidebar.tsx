@@ -185,16 +185,18 @@ export function NavigationSidebar({
           <CardTitle className="text-sm font-medium flex items-center justify-between">
             Admin Controls
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                {isFirebaseConnected === null ? (
-                  <Database className="h-3 w-3 text-gray-400 animate-pulse" />
-                ) : isFirebaseConnected ? (
-                  <Wifi className="h-3 w-3 text-green-500" />
-                ) : (
-                  <WifiOff className="h-3 w-3 text-red-500" />
-                )}
-                <span>Firebase</span>
-              </div>
+              {db && (
+                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                  {isFirebaseConnected === null ? (
+                    <Database className="h-3 w-3 text-gray-400 animate-pulse" />
+                  ) : isFirebaseConnected ? (
+                    <Wifi className="h-3 w-3 text-green-500" />
+                  ) : (
+                    <WifiOff className="h-3 w-3 text-red-500" />
+                  )}
+                  <span>Firebase</span>
+                </div>
+              )}
               <Badge 
                 variant={isAdminMode ? "default" : "outline"} 
                 className="cursor-pointer hover:bg-accent hover:text-accent-foreground"

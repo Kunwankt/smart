@@ -43,11 +43,10 @@ const optionalKeys = ["databaseURL", "measurementId"] as const;
 
 const missingKeys = requiredKeys.filter(key => !firebaseConfig[key]);
 
-if (missingKeys.length > 0 && typeof window !== "undefined") {
-  console.error(
-    `❌ Firebase configuration is missing keys: ${missingKeys.join(", ")}. ` +
-    "Check your .env.local file and ensure variables start with NEXT_PUBLIC_"
-  );
+// Only log a hint if the user actually wants to use Firebase
+if (missingKeys.length > 0 && typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+  // Silent warning instead of error to avoid cluttering the console
+  // console.log("ℹ️ Firebase is not configured. Some analytics features may be disabled.");
 }
 
 // Initialize Firebase safely
