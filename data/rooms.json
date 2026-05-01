@@ -50,6 +50,17 @@
           "connections": ["center_gate_left"]
         },
         {
+          "id": "colonel",
+          "name": "Colonel's Office",
+          "floor": "ground",
+          "x": 47,
+          "y": 210,
+          "width": 173,
+          "height": 95,
+          "type": "office",
+          "connections": ["center_gate_left"]
+        },
+        {
           "id": "room_011",
           "name": "011 Room",
           "floor": "ground",
