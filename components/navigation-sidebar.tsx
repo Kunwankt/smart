@@ -26,9 +26,12 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Room, Floor, NavigationStep } from "@/lib/building-data";
+import { Room, Floor, NavigationStep, Building } from "@/lib/building-data";
 
 interface NavigationSidebarProps {
+  buildings: Record<string, Building>;
+  selectedBuildingId: string;
+  onBuildingChange: (buildingId: string) => void;
   floors: Floor[];
   selectedFloor: string;
   onFloorChange: (floorId: string) => void;
@@ -58,6 +61,9 @@ interface NavigationSidebarProps {
 }
 
 export function NavigationSidebar({
+  buildings,
+  selectedBuildingId,
+  onBuildingChange,
   floors,
   selectedFloor,
   onFloorChange,
@@ -337,7 +343,12 @@ export function NavigationSidebar({
                     }}
                   >
                     <MapPin className="mr-2 h-3 w-3" />
-                    {room.name}
+                    <div className="flex flex-col items-start">
+                      <span>{room.name}</span>
+                      <span className="text-[10px] text-muted-foreground">
+                        {floors.find(f => f.id === room.floor)?.name || room.floor}
+                      </span>
+                    </div>
                   </Button>
                 ))}
               </div>
@@ -347,6 +358,22 @@ export function NavigationSidebar({
       </div>
 
       <div className="space-y-4 overflow-hidden flex flex-col min-h-0">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Building</label>
+          <Select value={selectedBuildingId} onValueChange={onBuildingChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select building" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.values(buildings).map((b) => (
+                <SelectItem key={b.id} value={b.id}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="space-y-2">
           <label className="text-sm font-medium">Floor</label>
           <Select value={selectedFloor} onValueChange={onFloorChange}>
@@ -375,7 +402,7 @@ export function NavigationSidebar({
             <SelectContent>
               {allRooms.map((room) => (
                 <SelectItem key={room.id} value={room.id}>
-                  {room.name}
+                  {room.name} ({floors.find(f => f.id === room.floor)?.name || room.floor})
                 </SelectItem>
               ))}
             </SelectContent>
@@ -394,7 +421,7 @@ export function NavigationSidebar({
             <SelectContent>
               {allRooms.map((room) => (
                 <SelectItem key={room.id} value={room.id}>
-                  {room.name}
+                  {room.name} ({floors.find(f => f.id === room.floor)?.name || room.floor})
                 </SelectItem>
               ))}
             </SelectContent>
@@ -404,6 +431,12 @@ export function NavigationSidebar({
         <Button className="w-full" onClick={onShowPath} disabled={!fromRoom || !toRoom}>
           <Navigation className="mr-2 h-4 w-4" /> Show Path
         </Button>
+
+        {fromRoom && !toRoom && (
+          <div className="p-3 bg-blue-50 border border-blue-100 rounded-md text-xs text-blue-700 animate-pulse">
+            Starting point set to <strong>{fromRoom.name}</strong>. Now click your destination on the map or select it above.
+          </div>
+        )}
 
         {navigationSteps.length > 0 && (
           <div className="flex-1 flex flex-col overflow-hidden min-h-0">

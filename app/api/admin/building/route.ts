@@ -38,9 +38,9 @@ export async function PUT(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => null);
-  const floors = body?.floors;
-  if (!floors) {
-    return NextResponse.json({ error: "Missing `floors` in body" }, { status: 400 });
+  const buildings = body?.buildings;
+  if (!buildings) {
+    return NextResponse.json({ error: "Missing `buildings` in body" }, { status: 400 });
   }
 
   // Try saving to Firebase first
@@ -48,12 +48,12 @@ export async function PUT(req: NextRequest) {
     try {
       const docRef = doc(db, "building", "cb_building");
       await setDoc(docRef, {
-        floors,
+        buildings,
         updatedAt: new Date()
       }, { merge: true });
       
       // Also sync to local JSON as backup
-      await saveRoomsData(floors);
+      await saveRoomsData(buildings);
       
       return NextResponse.json({ ok: true, source: "firebase" });
     } catch (err) {
@@ -62,7 +62,7 @@ export async function PUT(req: NextRequest) {
   }
 
   try {
-    const success = await saveRoomsData(floors);
+    const success = await saveRoomsData(buildings);
     if (success) {
       return NextResponse.json({ ok: true, source: "json-file" });
     } else {

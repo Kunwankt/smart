@@ -12,8 +12,10 @@ export async function GET() {
       
       if (docSnap.exists()) {
         const data = docSnap.data();
+        // Backward compatibility for Firebase
+        const buildings = data.buildings || { cb: { id: "cb", name: "Central Block", floors: data.floors } };
         return NextResponse.json({
-          floors: data.floors,
+          buildings: buildings,
           source: "firebase",
           updatedAt: data.updatedAt?.toDate?.() || data.updatedAt
         });
@@ -21,11 +23,11 @@ export async function GET() {
         console.log("Firebase document missing, seeding from local data...");
         const localData = await getRoomsData();
         await setDoc(docRef, {
-          floors: localData.floors,
+          buildings: localData.buildings,
           updatedAt: new Date()
         });
         return NextResponse.json({
-          floors: localData.floors,
+          buildings: localData.buildings,
           source: "firebase-seeded",
           updatedAt: localData.updatedAt
         });
@@ -39,7 +41,7 @@ export async function GET() {
   try {
     const data = await getRoomsData();
     return NextResponse.json({
-      floors: data.floors,
+      buildings: data.buildings,
       source: "json-file",
       updatedAt: data.updatedAt
     });

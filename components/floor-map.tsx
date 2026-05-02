@@ -108,18 +108,17 @@ export function FloorMap({
 
     const currentFloorId = rooms[0]?.floor;
     const isGround = currentFloorId === "ground";
-    const CORRIDOR_Y = 180;
-
+    
     let pathD = "";
     const points: { x: number; y: number }[] = [];
 
-    // Filter path to only include rooms on this floor
-    const floorPath = pathResult.path.filter((r) => r.floor === currentFloorId);
-    if (floorPath.length < 2) return null;
+    // Draw lines only between adjacent rooms in the path that are on the current floor
+    for (let i = 0; i < pathResult.path.length - 1; i++) {
+      const room1 = pathResult.path[i];
+      const room2 = pathResult.path[i + 1];
 
-    for (let i = 0; i < floorPath.length - 1; i++) {
-      const room1 = floorPath[i];
-      const room2 = floorPath[i + 1];
+      // Skip if either room is not on the current floor
+      if (room1.floor !== currentFloorId || room2.floor !== currentFloorId) continue;
 
       const x1 = room1.x + room1.width / 2;
       const y1 = room1.y + room1.height / 2;
@@ -132,23 +131,22 @@ export function FloorMap({
       }
 
       if (isGround) {
-        // STRICT CORRIDOR ROUTING: Vertical -> Horizontal -> Vertical
-        // 1. Move vertically from room1 center to corridor line
-        // 2. Move horizontally along corridor line to room2's x position
-        // 3. Move vertically from corridor line to room2 center
-        pathD += ` L ${x1} ${CORRIDOR_Y} L ${x2} ${CORRIDOR_Y} L ${x2} ${y2}`;
+        // Manhattan routing (Vertical then Horizontal or vice-versa)
+        // This creates a clean, block-based path that feels more natural for floor plans
+        if (Math.abs(x1 - x2) > Math.abs(y1 - y2)) {
+          // Mostly horizontal movement
+          pathD += ` L ${x2} ${y1} L ${x2} ${y2}`;
+        } else {
+          // Mostly vertical movement
+          pathD += ` L ${x1} ${y2} L ${x2} ${y2}`;
+        }
       } else {
         // Standard direct connection for other floors
         pathD += ` L ${x2} ${y2}`;
       }
+      
+      points.push({ x: x2, y: y2 });
     }
-
-    // Add final destination point
-    const lastRoom = floorPath[floorPath.length - 1];
-    points.push({
-      x: lastRoom.x + lastRoom.width / 2,
-      y: lastRoom.y + lastRoom.height / 2,
-    });
 
     if (pathD === "") return null;
 
@@ -166,33 +164,35 @@ export function FloorMap({
         {/* The background dashed path */}
         <path d={pathD} fill="none" className="nav-path" />
 
-        {/* Multiple moving arrows for flow */}
-        {[0, 1, 2].map((i) => (
-          <use key={`arrow-${i}`} href="#nav-arrow-shape">
-            <animateMotion
-              dur="4s"
-              repeatCount="indefinite"
-              path={pathD}
-              rotate="auto"
-              begin={`${i * 1.33}s`}
-            />
-          </use>
-        ))}
+        {/* Single moving arrow for flow */}
+        <use href="#nav-arrow-shape">
+          <animateMotion
+            dur="3s"
+            repeatCount="indefinite"
+            path={pathD}
+            rotate="auto"
+          />
+        </use>
 
         {/* Start/End markers */}
-        {points.map((p, i) => (
-          <circle
-            key={`pt-${i}`}
-            cx={p.x}
-            cy={p.y}
-            r="6"
-            className={cn(
-              "stroke-white",
-              i === 0 ? "fill-green-500" : "fill-sky-600"
-            )}
-            strokeWidth="2"
-          />
-        ))}
+        {points.length > 0 && (
+          <>
+            <circle
+              cx={points[0].x}
+              cy={points[0].y}
+              r="6"
+              className="stroke-white fill-green-500"
+              strokeWidth="2"
+            />
+            <circle
+              cx={points[points.length - 1].x}
+              cy={points[points.length - 1].y}
+              r="6"
+              className="stroke-white fill-sky-600"
+              strokeWidth="2"
+            />
+          </>
+        )}
       </g>
     );
   };
@@ -277,6 +277,7 @@ export function FloorMap({
               x={room.x + room.width / 2}
               y={room.y + room.height / 2 + 5}
               className="label"
+              textAnchor="middle"
             >
               {room.name}
             </text>

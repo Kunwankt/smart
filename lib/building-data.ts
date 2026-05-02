@@ -32,6 +32,12 @@ export interface Floor {
   rooms: Room[];
 }
 
+export interface Building {
+  id: string;
+  name: string;
+  floors: Floor[];
+}
+
 // Allows defining exact step counts between two directly connected rooms.
 // Key format: "<fromId>-><toId>" (order doesn't matter; we check both directions).
 export const stepOverrides: Record<string, number> = {
@@ -51,83 +57,143 @@ export interface PathResult {
   totalDistance: number;
 }
 
-// Default building data for CB Building
-export const defaultBuildingData: Floor[] = [
-  {
-    id: "ground",
-    name: "Ground",
-    level: 0,
-    rooms: [
-      { id: "main_gate", name: "Main Gate", floor: "ground", x: 400, y: 700, width: 120, height: 60, type: "gate", connections: ["help_desk"] },
-      { id: "help_desk", name: "Help Desk", floor: "ground", x: 400, y: 600, width: 140, height: 50, type: "desk", connections: ["main_gate", "center_gate_left"] },
-      { id: "center_gate_left", name: "Center Gate (Entry)", floor: "ground", x: 400, y: 350, width: 100, height: 60, type: "gate", connections: ["help_desk", "colonel", "lift_left_g", "stairs_left_g"] },
-      { id: "center_gate_right", name: "Center Gate (Exit)", floor: "ground", x: 500, y: 350, width: 100, height: 60, type: "gate", connections: [] },
-      { id: "lift_left_g", name: "Lift (Left)", floor: "ground", x: 300, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["center_gate_left"] },
-      { id: "stairs_left_g", name: "Stairs (Left)", floor: "ground", x: 230, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["center_gate_left"] },
-      { id: "lift_right_g", name: "Lift (Right)", floor: "ground", x: 640, y: 350, width: 60, height: 60, type: "stairs-lift", connections: [] },
-      { id: "stairs_right_g", name: "Stairs (Right)", floor: "ground", x: 710, y: 350, width: 60, height: 60, type: "stairs-lift", connections: [] },
+// Default building data for multiple buildings
+// CRITICAL: These coordinates and connections for CB are HARD-CODED based on manual Admin Mode edits.
+// DO NOT CHANGE these values without explicit user permission.
+export const defaultBuildings: Record<string, Building> = {
+  cb: {
+    id: "cb",
+    name: "Central Block (CB)",
+    floors: [
+      {
+        id: "ground",
+        name: "Ground",
+        level: 0,
+        rooms: [
+          { id: "main_gate", name: "Main Gate", floor: "ground", x: 400, y: 700, width: 120, height: 60, type: "gate", connections: ["center_gate_left", "help_desk"] },
+          { id: "help_desk", name: "Help Desk", floor: "ground", x: 676, y: 629, width: 140, height: 50, type: "desk", connections: ["main_gate"] },
+          { id: "center_gate_left", name: "Center Gate (Entry)", floor: "ground", x: 400, y: 350, width: 100, height: 60, type: "gate", connections: ["main_gate", "colonel", "lift_left_g", "stairs_left_g", "center_gate_right", "room_011", "executive_hall"] },
+          { id: "center_gate_right", name: "Center Gate (Exit)", floor: "ground", x: 500, y: 350, width: 100, height: 60, type: "gate", connections: ["center_gate_left", "lift_right_g", "stairs_right_g", "washroom_male"] },
+          { id: "lift_left_g", name: "Lift (Left)", floor: "ground", x: 300, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["center_gate_left"] },
+          { id: "stairs_left_g", name: "Stairs (Left)", floor: "ground", x: 230, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["center_gate_left"] },
+          { id: "lift_right_g", name: "Lift (Right)", floor: "ground", x: 640, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["center_gate_right"] },
+          { id: "stairs_right_g", name: "Stairs (Right)", floor: "ground", x: 710, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["center_gate_right"] },
 
-      { id: "exit_left", name: "Exit (Left End)", floor: "ground", x: 20, y: 80, width: 80, height: 80, type: "gate", connections: [] },
-      { id: "washroom_girls", name: "Washroom (Girls)", floor: "ground", x: 110, y: 80, width: 120, height: 80, type: "washroom", connections: [] },
-      { id: "colonel", name: "Colonel", floor: "ground", x: 110, y: 310, width: 120, height: 80, type: "office", connections: ["center_gate_left"] },
-      { id: "room_011", name: "011 Room", floor: "ground", x: 410, y: 80, width: 100, height: 80, type: "office", connections: [] },
-      { id: "executive_hall", name: "012 Executive Hall", floor: "ground", x: 530, y: 80, width: 160, height: 80, type: "office", connections: [] },
-      { id: "washroom_male", name: "Washroom (Male)", floor: "ground", x: 710, y: 80, width: 120, height: 80, type: "washroom", connections: [] },
-      { id: "audi_sv", name: "Audi SV", floor: "ground", x: 860, y: 50, width: 100, height: 200, type: "audi", connections: [] },
+          { id: "exit_left", name: "Exit (Left)", floor: "ground", x: 20, y: 80, width: 80, height: 80, type: "gate", connections: ["colonel"] },
+          { id: "washroom_female", name: "Washroom (Female)", floor: "ground", x: 112, y: 87, width: 120, height: 80, type: "washroom", connections: ["colonel"] },
+          { id: "colonel", name: "Colonel's Office", floor: "ground", x: 47, y: 210, width: 173, height: 95, type: "office", connections: ["center_gate_left", "washroom_female", "exit_left"] },
+          { id: "room_011", name: "011 Room", floor: "ground", x: 243, y: 83, width: 100, height: 80, type: "office", connections: ["center_gate_left"] },
+          { id: "executive_hall", name: "012 Executive Hall", floor: "ground", x: 354, y: 80, width: 349, height: 77, type: "office", connections: ["center_gate_left"] },
+          { id: "washroom_male", name: "Washroom (Male)", floor: "ground", x: 710, y: 80, width: 120, height: 80, type: "washroom", connections: ["center_gate_right", "audi_sv"] },
+          { id: "audi_sv", name: "Audi SV", floor: "ground", x: 860, y: 50, width: 100, height: 200, type: "audi", connections: ["washroom_male"] },
+        ],
+      },
+      {
+        id: "1st",
+        name: "1st Floor",
+        level: 1,
+        rooms: [
+          { id: "lift_left_1", name: "Lift (Left)", floor: "1st", x: 300, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["hod", "staff1"] },
+          { id: "stairs_left_1", name: "Stairs (Left)", floor: "1st", x: 230, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["hod", "staff1"] },
+          { id: "hod", name: "HOD Office", floor: "1st", x: 50, y: 50, width: 150, height: 150, type: "office", connections: ["lift_left_1"] },
+          { id: "staff1", name: "Staff Room A", floor: "1st", x: 210, y: 50, width: 150, height: 150, type: "office", connections: ["lift_left_1"] },
+        ],
+      },
+      {
+        id: "2nd",
+        name: "2nd Floor",
+        level: 2,
+        rooms: [
+          { id: "lift_left_2", name: "Lift (Left)", floor: "2nd", x: 300, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["lab1"] },
+          { id: "stairs_left_2", name: "Stairs (Left)", floor: "2nd", x: 230, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["lab1"] },
+          { id: "lab1", name: "Computer Lab 1", floor: "2nd", x: 50, y: 50, width: 150, height: 150, type: "lab", connections: ["lift_left_2"] },
+        ],
+      },
+      {
+        id: "3rd",
+        name: "3rd Floor",
+        level: 3,
+        rooms: [
+          { id: "lift_left_3", name: "Lift (Left)", floor: "3rd", x: 300, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["cr1"] },
+          { id: "stairs_left_3", name: "Stairs (Left)", floor: "3rd", x: 230, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["cr1"] },
+          { id: "cr1", name: "Classroom 301", floor: "3rd", x: 50, y: 50, width: 150, height: 150, type: "classroom", connections: ["lift_left_3"] },
+        ],
+      },
+      {
+        id: "4th",
+        name: "4th Floor",
+        level: 4,
+        rooms: [
+          { id: "lift_left_4", name: "Lift (Left)", floor: "4th", x: 300, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["auditorium"] },
+          { id: "stairs_left_4", name: "Stairs (Left)", floor: "4th", x: 230, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["auditorium"] },
+          { id: "auditorium", name: "Auditorium", floor: "4th", x: 50, y: 50, width: 700, height: 150, type: "audi", connections: ["lift_left_4"] },
+        ],
+      },
+      {
+        id: "5th",
+        name: "5th Floor",
+        level: 5,
+        rooms: [
+          { id: "lift_left_5", name: "Lift (Left)", floor: "5th", x: 300, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["library"] },
+          { id: "stairs_left_5", name: "Stairs (Left)", floor: "5th", x: 230, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["library"] },
+          { id: "library", name: "Main Library", floor: "5th", x: 50, y: 50, width: 500, height: 400, type: "office", connections: ["lift_left_5"] },
+        ],
+      },
+      {
+        id: "6th",
+        name: "6th Floor",
+        level: 6,
+        rooms: [
+          { id: "lift_left_6", name: "Lift (Left)", floor: "6th", x: 300, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["office6"] },
+          { id: "stairs_left_6", name: "Stairs (Left)", floor: "6th", x: 230, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["office6"] },
+          { id: "office6", name: "6th Floor Office", floor: "6th", x: 50, y: 50, width: 200, height: 200, type: "office", connections: ["lift_left_6"] },
+        ],
+      },
     ],
   },
-  {
-    id: "1st",
-    name: "1st Floor",
-    level: 1,
-    rooms: [
-      { id: "lift_left_1", name: "Lift (Left)", floor: "1st", x: 300, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["hod", "staff1"] },
-      { id: "stairs_left_1", name: "Stairs (Left)", floor: "1st", x: 230, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["hod", "staff1"] },
-      { id: "hod", name: "HOD Office", floor: "1st", x: 50, y: 50, width: 150, height: 150, type: "office", connections: ["lift_left_1"] },
-      { id: "staff1", name: "Staff Room A", floor: "1st", x: 210, y: 50, width: 150, height: 150, type: "office", connections: ["lift_left_1"] },
+  cme: {
+    id: "cme",
+    name: "CME Building",
+    floors: [
+      { id: "ground", name: "Ground", level: 0, rooms: [] },
+      { id: "1st", name: "1st Floor", level: 1, rooms: [] },
+      { id: "2nd", name: "2nd Floor", level: 2, rooms: [] },
+      { id: "3rd", name: "3rd Floor", level: 3, rooms: [] },
+      { id: "4th", name: "4th Floor", level: 4, rooms: [] },
+      { id: "5th", name: "5th Floor", level: 5, rooms: [] },
+      { id: "6th", name: "6th Floor", level: 6, rooms: [] },
     ],
   },
-  {
-    id: "2nd",
-    name: "2nd Floor",
-    level: 2,
-    rooms: [
-      { id: "lift_left_2", name: "Lift (Left)", floor: "2nd", x: 300, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["lab1"] },
-      { id: "stairs_left_2", name: "Stairs (Left)", floor: "2nd", x: 230, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["lab1"] },
-      { id: "lab1", name: "Computer Lab 1", floor: "2nd", x: 50, y: 50, width: 150, height: 150, type: "lab", connections: ["lift_left_2"] },
+  ict: {
+    id: "ict",
+    name: "ICT Building",
+    floors: [
+      { id: "ground", name: "Ground", level: 0, rooms: [] },
+      { id: "1st", name: "1st Floor", level: 1, rooms: [] },
+      { id: "2nd", name: "2nd Floor", level: 2, rooms: [] },
+      { id: "3rd", name: "3rd Floor", level: 3, rooms: [] },
+      { id: "4th", name: "4th Floor", level: 4, rooms: [] },
+      { id: "5th", name: "5th Floor", level: 5, rooms: [] },
+      { id: "6th", name: "6th Floor", level: 6, rooms: [] },
     ],
   },
-  {
-    id: "3rd",
-    name: "3rd Floor",
-    level: 3,
-    rooms: [
-      { id: "lift_left_3", name: "Lift (Left)", floor: "3rd", x: 300, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["cr1"] },
-      { id: "stairs_left_3", name: "Stairs (Left)", floor: "3rd", x: 230, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["cr1"] },
-      { id: "cr1", name: "Classroom 301", floor: "3rd", x: 50, y: 50, width: 150, height: 150, type: "classroom", connections: ["lift_left_3"] },
+  tha: {
+    id: "tha",
+    name: "THA Building",
+    floors: [
+      { id: "ground", name: "Ground", level: 0, rooms: [] },
+      { id: "1st", name: "1st Floor", level: 1, rooms: [] },
+      { id: "2nd", name: "2nd Floor", level: 2, rooms: [] },
+      { id: "3rd", name: "3rd Floor", level: 3, rooms: [] },
+      { id: "4th", name: "4th Floor", level: 4, rooms: [] },
+      { id: "5th", name: "5th Floor", level: 5, rooms: [] },
+      { id: "6th", name: "6th Floor", level: 6, rooms: [] },
     ],
   },
-  {
-    id: "4th",
-    name: "4th Floor",
-    level: 4,
-    rooms: [
-      { id: "lift_left_4", name: "Lift (Left)", floor: "4th", x: 300, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["auditorium"] },
-      { id: "stairs_left_4", name: "Stairs (Left)", floor: "4th", x: 230, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["auditorium"] },
-      { id: "auditorium", name: "Auditorium", floor: "4th", x: 50, y: 50, width: 700, height: 150, type: "audi", connections: ["lift_left_4"] },
-    ],
-  },
-  {
-    id: "5th",
-    name: "5th Floor",
-    level: 5,
-    rooms: [
-      { id: "lift_left_5", name: "Lift (Left)", floor: "5th", x: 300, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["library"] },
-      { id: "stairs_left_5", name: "Stairs (Left)", floor: "5th", x: 230, y: 350, width: 60, height: 60, type: "stairs-lift", connections: ["library"] },
-      { id: "library", name: "Main Library", floor: "5th", x: 50, y: 50, width: 500, height: 400, type: "office", connections: ["lift_left_5"] },
-    ],
-  },
-];
+};
+
+// For backward compatibility
+export const defaultBuildingData: Floor[] = defaultBuildings.cb.floors;
 
 // Calculate distance between two rooms (Manhattan distance for indoor navigation)
 export function calculateDistance(room1: Room, room2: Room): number {

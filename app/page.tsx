@@ -9,22 +9,28 @@ import { CoordinatePicker } from "@/components/coordinate-picker";
 import {
   Room,
   Floor,
+  Building,
   PathResult,
   NavigationStep,
-  defaultBuildingData,
+  defaultBuildings,
   findPath,
 } from "@/lib/building-data";
 
 export default function IndoorNavPage() {
-  // Building data state
-  const [floors, setFloors] = useState<Floor[]>(defaultBuildingData);
+  // Multi-building state
+  const [buildings, setBuildings] = useState<Record<string, Building>>(defaultBuildings);
+  const [selectedBuildingId, setSelectedBuildingId] = useState("cb");
+  
+  // Current building floors
+  const floors = useMemo(() => buildings[selectedBuildingId]?.floors || [], [buildings, selectedBuildingId]);
+  
   const [selectedFloor, setSelectedFloor] = useState("ground");
   const [adminKey, setAdminKey] = useState<string | null>(null);
   const saveTimer = useRef<number | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const lastSavedFloorsJson = useRef<string>(JSON.stringify(defaultBuildingData));
+  const lastSavedBuildingsJson = useRef<string>(JSON.stringify(defaultBuildings));
 
   // Navigation state
   const [fromRoom, setFromRoom] = useState<Room | null>(null);
@@ -53,19 +59,19 @@ export default function IndoorNavPage() {
   // Get all rooms for search/select
   const allRooms = useMemo(() => floors.flatMap((f) => f.rooms), [floors]);
 
-  // Load floors from DB on startup
+  // Load buildings from DB on startup
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const res = await fetch("/api/building", { cache: "no-store" });
         const data = await res.json();
-        if (!cancelled && data?.floors) {
-          setFloors(data.floors);
-          lastSavedFloorsJson.current = JSON.stringify(data.floors);
+        if (!cancelled && data?.buildings) {
+          setBuildings(data.buildings);
+          lastSavedBuildingsJson.current = JSON.stringify(data.buildings);
           setHasUnsavedChanges(false);
-          // Default start room
-          const mainGate = data.floors
+          // Default start room in CB building
+          const mainGate = data.buildings.cb.floors
             .flatMap((f: Floor) => f.rooms)
             .find((r: Room) => r.id === "main_gate");
           if (mainGate) setFromRoom(mainGate);
@@ -80,7 +86,7 @@ export default function IndoorNavPage() {
   }, []);
 
   const performSave = useCallback(
-    async (nextFloors: Floor[]) => {
+    async (nextBuildings: Record<string, Building>) => {
       if (!adminKey) return false;
       try {
         setSaveStatus("saving");
@@ -91,7 +97,7 @@ export default function IndoorNavPage() {
             "content-type": "application/json",
             "x-admin-key": adminKey,
           },
-          body: JSON.stringify({ floors: nextFloors }),
+          body: JSON.stringify({ buildings: nextBuildings }),
         });
         if (!res.ok) {
           const data = await res.json().catch(() => null);
@@ -100,7 +106,7 @@ export default function IndoorNavPage() {
           return false;
         }
 
-        lastSavedFloorsJson.current = JSON.stringify(nextFloors);
+        lastSavedBuildingsJson.current = JSON.stringify(nextBuildings);
         setHasUnsavedChanges(false);
         setSaveStatus("saved");
         window.setTimeout(() => setSaveStatus("idle"), 1200);
@@ -114,12 +120,12 @@ export default function IndoorNavPage() {
     [adminKey]
   );
 
-  const saveFloorsToDb = useCallback(
-    (nextFloors: Floor[]) => {
+  const saveBuildingsToDb = useCallback(
+    (nextBuildings: Record<string, Building>) => {
       if (!adminKey) return;
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
       saveTimer.current = window.setTimeout(() => {
-        void performSave(nextFloors);
+        void performSave(nextBuildings);
       }, 400);
     },
     [adminKey, performSave]
@@ -127,8 +133,8 @@ export default function IndoorNavPage() {
 
   const saveNow = useCallback(async () => {
     if (saveTimer.current) window.clearTimeout(saveTimer.current);
-    return await performSave(floors);
-  }, [floors, performSave]);
+    return await performSave(buildings);
+  }, [buildings, performSave]);
 
   // Filter rooms by search query
   const filteredRooms = useMemo(() => {
@@ -138,6 +144,16 @@ export default function IndoorNavPage() {
       room.name.toLowerCase().includes(query)
     );
   }, [allRooms, searchQuery]);
+
+  // Handle building change
+  const handleBuildingChange = useCallback((buildingId: string) => {
+    setSelectedBuildingId(buildingId);
+    setSelectedFloor("ground");
+    setFromRoom(null);
+    setToRoom(null);
+    setPathResult(null);
+    setNavigationSteps([]);
+  }, []);
 
   // Handle floor change
   const handleFloorChange = useCallback((floorId: string) => {
@@ -152,11 +168,17 @@ export default function IndoorNavPage() {
         return;
       }
 
+      // If clicking the same room that's already the start, do nothing or clear it
+      if (fromRoom?.id === room.id) {
+        return;
+      }
+
       // View mode: click-to-navigate behavior
       setSelectedFloor(room.floor);
 
       if (!fromRoom) {
         setFromRoom(room);
+        // Show a temporary path-like highlight or just set the start
         return;
       }
 
@@ -169,8 +191,7 @@ export default function IndoorNavPage() {
         setPathResult(null);
         setNavigationSteps([
           {
-            instruction:
-              "No path found. Admin needs to connect rooms (connections).",
+            instruction: `No path found from ${fromRoom.name} to ${room.name}. Admin needs to connect these rooms.`,
             distance: 0,
             floor: room.floor,
           },
@@ -191,8 +212,11 @@ export default function IndoorNavPage() {
 
   const handleRoomUpdateOnMap = useCallback(
     (room: Room) => {
-    setFloors((prev) => {
-      const next = prev.map((floor) =>
+    setBuildings((prev) => {
+      const currentBuilding = prev[selectedBuildingId];
+      if (!currentBuilding) return prev;
+
+      const nextFloors = currentBuilding.floors.map((floor) =>
         floor.id === room.floor
           ? {
               ...floor,
@@ -200,15 +224,21 @@ export default function IndoorNavPage() {
             }
           : floor
       );
+
+      const next = {
+        ...prev,
+        [selectedBuildingId]: { ...currentBuilding, floors: nextFloors }
+      };
+
       if (isAdminMode) {
         const nextJson = JSON.stringify(next);
-        setHasUnsavedChanges(nextJson !== lastSavedFloorsJson.current);
+        setHasUnsavedChanges(nextJson !== lastSavedBuildingsJson.current);
       }
-      saveFloorsToDb(next);
+      saveBuildingsToDb(next);
       return next;
     });
     },
-    [saveFloorsToDb, isAdminMode]
+    [saveBuildingsToDb, isAdminMode, selectedBuildingId]
   );
 
   // Handle map click for coordinate picking
@@ -246,8 +276,11 @@ export default function IndoorNavPage() {
   // Handle save room
   const handleSaveRoom = useCallback(
     (room: Room) => {
-      setFloors((prev) => {
-        const next = prev.map((floor) => {
+      setBuildings((prev) => {
+        const currentBuilding = prev[selectedBuildingId];
+        if (!currentBuilding) return prev;
+
+        const nextFloors = currentBuilding.floors.map((floor) => {
           if (floor.id !== room.floor) {
             // Remove room from other floors if it was moved
             return {
@@ -278,26 +311,35 @@ export default function IndoorNavPage() {
             });
             return { ...floor, rooms: newRooms };
           }
-        })
+        });
+
+        const next = {
+          ...prev,
+          [selectedBuildingId]: { ...currentBuilding, floors: nextFloors }
+        };
+
         if (isAdminMode) {
           const nextJson = JSON.stringify(next);
-          setHasUnsavedChanges(nextJson !== lastSavedFloorsJson.current);
+          setHasUnsavedChanges(nextJson !== lastSavedBuildingsJson.current);
         }
-        saveFloorsToDb(next);
+        saveBuildingsToDb(next);
         return next;
       });
       setEditingRoom(null);
       setPickedCoordinates(null);
       setIsPickingCoordinates(false);
     },
-    [saveFloorsToDb, isAdminMode]
+    [saveBuildingsToDb, isAdminMode, selectedBuildingId]
   );
 
   // Handle delete room
   const handleDeleteRoom = useCallback(
     (roomId: string) => {
-    setFloors((prev) => {
-      const next = prev.map((floor) => ({
+    setBuildings((prev) => {
+      const currentBuilding = prev[selectedBuildingId];
+      if (!currentBuilding) return prev;
+
+      const nextFloors = currentBuilding.floors.map((floor) => ({
         ...floor,
         rooms: floor.rooms
           .filter((r) => r.id !== roomId)
@@ -306,20 +348,26 @@ export default function IndoorNavPage() {
             connections: r.connections.filter((c) => c !== roomId),
           })),
       }));
+
+      const next = {
+        ...prev,
+        [selectedBuildingId]: { ...currentBuilding, floors: nextFloors }
+      };
+
       if (isAdminMode) {
         const nextJson = JSON.stringify(next);
-        setHasUnsavedChanges(nextJson !== lastSavedFloorsJson.current);
+        setHasUnsavedChanges(nextJson !== lastSavedBuildingsJson.current);
       }
-      saveFloorsToDb(next);
+      saveBuildingsToDb(next);
       return next;
     });
     },
-    [saveFloorsToDb, isAdminMode]
+    [saveBuildingsToDb, isAdminMode, selectedBuildingId]
   );
 
   // Handle reset to default
   const handleResetData = useCallback(() => {
-    setFloors(defaultBuildingData);
+    setBuildings(defaultBuildings);
     setPathResult(null);
     setNavigationSteps([]);
     setFromRoom(null);
@@ -327,7 +375,7 @@ export default function IndoorNavPage() {
     setEditingRoom(null);
     setPickedCoordinates(null);
     setIsPickingCoordinates(false);
-    lastSavedFloorsJson.current = JSON.stringify(defaultBuildingData);
+    lastSavedBuildingsJson.current = JSON.stringify(defaultBuildings);
     setHasUnsavedChanges(false);
   }, []);
 
@@ -351,11 +399,17 @@ export default function IndoorNavPage() {
       setSelectedFloor(room.floor);
       if (!fromRoom) {
         setFromRoom(room);
-      } else if (!toRoom) {
+      } else {
         setToRoom(room);
+        // Automatically calculate path when selecting second room from search
+        const result = findPath(fromRoom, room, floors);
+        if (result) {
+          setPathResult(result);
+          setNavigationSteps(result.steps);
+        }
       }
     },
-    [fromRoom, toRoom]
+    [fromRoom, floors]
   );
 
   // Handle add room at picked coordinates
@@ -377,7 +431,7 @@ export default function IndoorNavPage() {
           <div>
             <h1 className="text-lg font-semibold text-foreground">IndoorNav</h1>
             <p className="text-xs text-muted-foreground">
-              CB Building Navigation {isAdminMode && "(Admin)"}
+              {buildings[selectedBuildingId]?.name || "Building Navigation"} {isAdminMode && "(Admin)"}
             </p>
           </div>
           {isAdminMode && (
@@ -403,14 +457,25 @@ export default function IndoorNavPage() {
         <div className="flex gap-6">
           {/* Sidebar */}
           <NavigationSidebar
+            buildings={buildings}
+            selectedBuildingId={selectedBuildingId}
+            onBuildingChange={handleBuildingChange}
             floors={floors}
             selectedFloor={selectedFloor}
             onFloorChange={handleFloorChange}
             allRooms={allRooms}
             fromRoom={fromRoom}
             toRoom={toRoom}
-            onFromChange={setFromRoom}
-            onToChange={setToRoom}
+            onFromChange={(room) => {
+              setFromRoom(room);
+              setPathResult(null);
+              setNavigationSteps([]);
+            }}
+            onToChange={(room) => {
+              setToRoom(room);
+              setPathResult(null);
+              setNavigationSteps([]);
+            }}
             onShowPath={handleShowPath}
             onClearPath={handleClearPath}
             navigationSteps={navigationSteps}

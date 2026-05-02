@@ -1,111 +1,78 @@
 {
-  "floors": [
-    {
-      "id": "ground",
-      "name": "Ground",
-      "level": 0,
-      "rooms": [
+  "buildings": {
+    "cb": {
+      "id": "cb",
+      "name": "Central Block (CB)",
+      "floors": [
         {
-          "id": "main_gate",
-          "name": "Main Gate",
-          "floor": "ground",
-          "x": 400,
-          "y": 700,
-          "width": 120,
-          "height": 60,
-          "type": "gate",
-          "connections": ["center_gate_left"]
+          "id": "ground",
+          "name": "Ground",
+          "level": 0,
+          "rooms": [
+            { "id": "main_gate", "name": "Main Gate", "floor": "ground", "x": 400, "y": 700, "width": 120, "height": 60, "type": "gate", "connections": ["center_gate_left", "help_desk"] },
+            { "id": "help_desk", "name": "Help Desk", "floor": "ground", "x": 676, "y": 629, "width": 140, "height": 50, "type": "desk", "connections": ["main_gate"] },
+            { "id": "center_gate_left", "name": "Center Gate (Entry)", "floor": "ground", "x": 400, "y: 350", "width": 100, "height": 60, "type": "gate", "connections": ["main_gate", "colonel", "lift_left_g", "stairs_left_g", "center_gate_right", "room_011", "executive_hall"] },
+            { "id": "center_gate_right", "name": "Center Gate (Exit)", "floor": "ground", "x": 500, "y: 350", "width": 100, "height": 60, "type": "gate", "connections": ["center_gate_left", "lift_right_g", "stairs_right_g", "washroom_male"] },
+            { "id": "lift_left_g", "name": "Lift (Left)", "floor": "ground", "x": 300, "y": 350, "width": 60, "height": 60, "type": "stairs-lift", "connections": ["center_gate_left"] },
+            { "id": "stairs_left_g", "name": "Stairs (Left)", "floor": "ground", "x": 230, "y": 350, "width": 60, "height": 60, "type": "stairs-lift", "connections": ["center_gate_left"] },
+            { "id": "lift_right_g", "name": "Lift (Right)", "floor": "ground", "x": 640, "y": 350, "width": 60, "height": 60, "type": "stairs-lift", "connections": ["center_gate_right"] },
+            { "id": "stairs_right_g", "name": "Stairs (Right)", "floor": "ground", "x": 710, "y": 350, "width": 60, "height": 60, "type": "stairs-lift", "connections": ["center_gate_right"] },
+            { "id": "exit_left", "name": "Exit (Left)", "floor": "ground", "x": 20, "y": 80, "width": 80, "height": 80, "type": "gate", "connections": ["colonel"] },
+            { "id": "washroom_female", "name": "Washroom (Female)", "floor": "ground", "x": 112, "y": 87, "width": 120, "height": 80, "type": "washroom", "connections": ["colonel"] },
+            { "id": "colonel", "name": "Colonel's Office", "floor": "ground", "x": 47, "y": 210, "width": 173, "height": 95, "type": "office", "connections": ["center_gate_left", "washroom_female", "exit_left"] },
+            { "id": "room_011", "name": "011 Room", "floor": "ground", "x": 243, "y": 83, "width": 100, "height": 80, "type": "office", "connections": ["center_gate_left"] },
+            { "id": "executive_hall", "name": "012 Executive Hall", "floor": "ground", "x": 354, "y": 80, "width": 349, "height": 77, "type": "office", "connections": ["center_gate_left"] },
+            { "id": "washroom_male", "name": "Washroom (Male)", "floor": "ground", "x": 710, "y": 80, "width": 120, "height": 80, "type": "washroom", "connections": ["center_gate_right", "audi_sv"] },
+            { "id": "audi_sv", "name": "Audi SV", "floor": "ground", "x": 860, "y": 50, "width": 100, "height": 200, "type": "audi", "connections": ["washroom_male"] }
+          ]
         },
-        {
-          "id": "help_desk",
-          "name": "Help Desk",
-          "floor": "ground",
-          "x": 400,
-          "y": 600,
-          "width": 140,
-          "height": 50,
-          "type": "desk",
-          "connections": ["main_gate", "center_gate_left"]
-        },
-        {
-          "id": "center_gate_left",
-          "name": "Center Gate (Entry)",
-          "floor": "ground",
-          "x": 400,
-          "y": 350,
-          "width": 100,
-          "height": 60,
-          "type": "gate",
-          "connections": ["main_gate", "washroom_male", "room_011", "executive_hall", "colonel"]
-        },
-        {
-          "id": "center_gate_right",
-          "name": "Center Gate (Exit)",
-          "floor": "ground",
-          "x": 500,
-          "y": 350,
-          "width": 100,
-          "height": 60,
-          "type": "gate",
-          "connections": ["center_gate_left"]
-        },
-        {
-          "id": "colonel",
-          "name": "Colonel's Office",
-          "floor": "ground",
-          "x": 47,
-          "y": 210,
-          "width": 173,
-          "height": 95,
-          "type": "office",
-          "connections": ["center_gate_left"]
-        },
-        {
-          "id": "room_011",
-          "name": "011 Room",
-          "floor": "ground",
-          "x": 243,
-          "y": 83,
-          "width": 100,
-          "height": 80,
-          "type": "office",
-          "connections": ["center_gate_left"]
-        },
-        {
-          "id": "executive_hall",
-          "name": "012 Executive Hall",
-          "floor": "ground",
-          "x": 354,
-          "y": 80,
-          "width": 349,
-          "height": 77,
-          "type": "office",
-          "connections": ["center_gate_left"]
-        },
-        {
-          "id": "washroom_male",
-          "name": "Washroom (Male)",
-          "floor": "ground",
-          "x": 710,
-          "y": 80,
-          "width": 120,
-          "height": 80,
-          "type": "washroom",
-          "connections": ["center_gate_left", "audi_sv"]
-        },
-        {
-          "id": "audi_sv",
-          "name": "Audi SV",
-          "floor": "ground",
-          "x": 860,
-          "y": 50,
-          "width": 100,
-          "height": 200,
-          "type": "audi",
-          "connections": ["washroom_male"]
-        }
+        { "id": "1st", "name": "1st Floor", "level": 1, "rooms": [] },
+        { "id": "2nd", "name": "2nd Floor", "level": 2, "rooms": [] },
+        { "id": "3rd", "name": "3rd Floor", "level": 3, "rooms": [] },
+        { "id": "4th", "name": "4th Floor", "level": 4, "rooms": [] },
+        { "id": "5th", "name": "5th Floor", "level": 5, "rooms": [] },
+        { "id": "6th", "name": "6th Floor", "level": 6, "rooms": [] }
+      ]
+    },
+    "cme": {
+      "id": "cme",
+      "name": "CME Building",
+      "floors": [
+        { "id": "ground", "name": "Ground", "level": 0, "rooms": [] },
+        { "id": "1st", "name": "1st Floor", "level": 1, "rooms": [] },
+        { "id": "2nd", "name": "2nd Floor", "level": 2, "rooms": [] },
+        { "id": "3rd", "name": "3rd Floor", "level": 3, "rooms": [] },
+        { "id": "4th", "name": "4th Floor", "level": 4, "rooms": [] },
+        { "id": "5th", "name": "5th Floor", "level": 5, "rooms": [] },
+        { "id": "6th", "name": "6th Floor", "level": 6, "rooms": [] }
+      ]
+    },
+    "ict": {
+      "id": "ict",
+      "name": "ICT Building",
+      "floors": [
+        { "id": "ground", "name": "Ground", "level": 0, "rooms": [] },
+        { "id": "1st", "name": "1st Floor", "level": 1, "rooms": [] },
+        { "id": "2nd", "name": "2nd Floor", "level": 2, "rooms": [] },
+        { "id": "3rd", "name": "3rd Floor", "level": 3, "rooms": [] },
+        { "id": "4th", "name": "4th Floor", "level": 4, "rooms": [] },
+        { "id": "5th", "name": "5th Floor", "level": 5, "rooms": [] },
+        { "id": "6th", "name": "6th Floor", "level": 6, "rooms": [] }
+      ]
+    },
+    "tha": {
+      "id": "tha",
+      "name": "THA Building",
+      "floors": [
+        { "id": "ground", "name": "Ground", "level": 0, "rooms": [] },
+        { "id": "1st", "name": "1st Floor", "level": 1, "rooms": [] },
+        { "id": "2nd", "name": "2nd Floor", "level": 2, "rooms": [] },
+        { "id": "3rd", "name": "3rd Floor", "level": 3, "rooms": [] },
+        { "id": "4th", "name": "4th Floor", "level": 4, "rooms": [] },
+        { "id": "5th", "name": "5th Floor", "level": 5, "rooms": [] },
+        { "id": "6th", "name": "6th Floor", "level": 6, "rooms": [] }
       ]
     }
-  ],
-  "updatedAt": "2026-05-01T17:40:00.000Z"
+  },
+  "updatedAt": "2026-05-03T13:00:00.000Z"
 }
